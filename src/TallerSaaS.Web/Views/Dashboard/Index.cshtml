@@ -1,0 +1,620 @@
+@using TallerSaaS.Application.DTOs
+@using System.Text.Json
+@model DashboardDto
+@{
+    ViewData["Title"] = "Dashboard";
+
+    // KPI data from DashboardController ViewBag
+    var ventasMes        = (decimal)(ViewBag.VentasMesCOP        ?? Model.VentasMes);
+    var ordenesActivas   = (int)    (ViewBag.OrdenesActivas       ?? Model.OrdenesAbiertas);
+    var vehiculosEntrega = (int)    (ViewBag.VehiculosParaEntrega ?? 0);
+    var totalVehiculos   = (int)    (ViewBag.TotalVehiculos       ?? Model.TotalVehiculos);
+
+    // Chart data
+    var flujoCajaLabels    = ViewBag.FlujoCajaLabels   as List<string>  ?? Model.VentasMensuales.Select(v => v.Mes).ToList();
+    var flujoCajaData      = ViewBag.FlujoCajaData     as List<decimal> ?? Model.VentasMensuales.Select(v => v.Total).ToList();
+    var topServLabels      = ViewBag.TopServiciosLabels as List<string>  ?? Model.OrdenesPorEstado.Select(e => e.Estado).ToList();
+    var topServData        = ViewBag.TopServiciosData   as List<int>     ?? Model.OrdenesPorEstado.Select(e => e.Conteo).ToList();
+
+    var flujoCajaLabelsJson = JsonSerializer.Serialize(flujoCajaLabels);
+    var flujoCajaDataJson   = JsonSerializer.Serialize(flujoCajaData);
+    var topServLabelsJson   = JsonSerializer.Serialize(topServLabels);
+    var topServDataJson     = JsonSerializer.Serialize(topServData);
+    var estadosJson         = JsonSerializer.Serialize(Model.OrdenesPorEstado);
+}
+
+<!-- ════════════════════════════════════════════════════════════
+     PAGE HEADER
+════════════════════════════════════════════════════════════════ -->
+<div class="dash-page-header">
+    <div>
+        <h1 class="dash-title">Dashboard</h1>
+        <p class="dash-subtitle">
+            <span class="dash-dot"></span>
+            Resumen operativo · @DateTime.Now.ToString("dddd, d 'de' MMMM yyyy", new System.Globalization.CultureInfo("es-CO"))
+        </p>
+    </div>
+    <div class="dash-header-actions">
+        <a asp-controller="Reportes" asp-action="VentasExcel" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-down-circle me-1"></i>Exportar
+        </a>
+        <a asp-controller="Ordenes" asp-action="Crear" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Orden
+        </a>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     4 KPI CARDS — Glassmorphism
+════════════════════════════════════════════════════════════════ -->
+<div class="kpi-grid">
+
+    <!-- Ventas del Mes COP -->
+    <a asp-controller="Reportes" asp-action="VentasExcel" class="kpi-glass text-decoration-none">
+        <div class="kpi-glass-icon" style="--icon-bg:rgba(0,102,204,.08);--icon-color:#0066CC;">
+            <i class="bi bi-cash-stack"></i>
+        </div>
+        <div class="kpi-glass-body">
+            <div class="kpi-glass-value">
+                $@ventasMes.ToString("N0")
+            </div>
+            <div class="kpi-glass-label">Ventas del Mes (COP)</div>
+            <div class="kpi-glass-sub">Órdenes pagadas · mes actual</div>
+        </div>
+        <div class="kpi-glass-arrow"><i class="bi bi-chevron-right"></i></div>
+    </a>
+
+    <!-- Órdenes Activas -->
+    <a asp-controller="Ordenes" asp-action="Index" class="kpi-glass text-decoration-none">
+        <div class="kpi-glass-icon" style="--icon-bg:rgba(255,149,0,.08);--icon-color:#FF9500;">
+            <i class="bi bi-wrench-adjustable-circle"></i>
+        </div>
+        <div class="kpi-glass-body">
+            <div class="kpi-glass-value">@ordenesActivas</div>
+            <div class="kpi-glass-label">Órdenes Activas</div>
+            <div class="kpi-glass-sub">En proceso de servicio</div>
+        </div>
+        <div class="kpi-glass-arrow"><i class="bi bi-chevron-right"></i></div>
+    </a>
+
+    <!-- Vehículos para Entrega -->
+    <a asp-controller="Ordenes" asp-action="Index" asp-route-estado="3" class="kpi-glass text-decoration-none">
+        <div class="kpi-glass-icon" style="--icon-bg:rgba(52,199,89,.08);--icon-color:#34C759;">
+            <i class="bi bi-car-front"></i>
+        </div>
+        <div class="kpi-glass-body">
+            <div class="kpi-glass-value">@vehiculosEntrega</div>
+            <div class="kpi-glass-label">Listos para Entrega</div>
+            <div class="kpi-glass-sub">Terminados · pendiente al cliente</div>
+        </div>
+        <div class="kpi-glass-arrow"><i class="bi bi-chevron-right"></i></div>
+    </a>
+
+    <!-- Total Vehículos -->
+    <a asp-controller="Vehiculos" asp-action="Index" class="kpi-glass text-decoration-none">
+        <div class="kpi-glass-icon" style="--icon-bg:rgba(108,108,255,.08);--icon-color:#6C6CFF;">
+            <i class="bi bi-car-front-fill"></i>
+        </div>
+        <div class="kpi-glass-body">
+            <div class="kpi-glass-value">@totalVehiculos</div>
+            <div class="kpi-glass-label">Vehículos Registrados</div>
+            <div class="kpi-glass-sub">Parque total del taller</div>
+        </div>
+        <div class="kpi-glass-arrow"><i class="bi bi-chevron-right"></i></div>
+    </a>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHARTS ROW
+════════════════════════════════════════════════════════════════ -->
+<div class="dash-charts-row">
+
+    <!-- Chart A — Ingresos Semanales (line + gradient) -->
+    <div class="dash-chart-card dash-chart-wide">
+        <div class="dash-chart-header">
+            <div>
+                <div class="dash-chart-title">Flujo de Caja Semanal</div>
+                <div class="dash-chart-sub">Ingresos por semana · COP</div>
+            </div>
+            <span class="dash-chart-badge">8 semanas</span>
+        </div>
+        <div class="dash-chart-body">
+            <canvas id="chartIngresos"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart B — Servicios más solicitados (horizontal bar) -->
+    <div class="dash-chart-card dash-chart-narrow">
+        <div class="dash-chart-header">
+            <div>
+                <div class="dash-chart-title">Top Servicios</div>
+                <div class="dash-chart-sub">Más solicitados</div>
+            </div>
+            <span class="dash-chart-badge">Top 6</span>
+        </div>
+        <div class="dash-chart-body">
+            <canvas id="chartServicios"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     QUICK ACTIONS
+════════════════════════════════════════════════════════════════ -->
+<div class="dash-quick-section">
+    <div class="dash-section-label">Acciones Rápidas</div>
+    <div class="dash-quick-grid">
+
+        <a asp-controller="Ordenes" asp-action="Crear" class="dash-quick-btn" data-color="#0066CC">
+            <div class="dash-quick-icon" style="background:#EBF4FF;color:#0066CC;">
+                <i class="bi bi-file-earmark-plus"></i>
+            </div>
+            <div>
+                <div class="dash-quick-name">Nueva Orden</div>
+                <div class="dash-quick-desc">Abrir servicio</div>
+            </div>
+        </a>
+
+        <a asp-controller="Clientes" asp-action="Crear" class="dash-quick-btn" data-color="#34C759">
+            <div class="dash-quick-icon" style="background:#E9F7EF;color:#34C759;">
+                <i class="bi bi-person-plus"></i>
+            </div>
+            <div>
+                <div class="dash-quick-name">Registrar Cliente</div>
+                <div class="dash-quick-desc">Nuevo cliente</div>
+            </div>
+        </a>
+
+        <a asp-controller="Vehiculos" asp-action="Crear" class="dash-quick-btn" data-color="#FF9500">
+            <div class="dash-quick-icon" style="background:#FFF4E5;color:#FF9500;">
+                <i class="bi bi-car-front"></i>
+            </div>
+            <div>
+                <div class="dash-quick-name">Ingresar Vehículo</div>
+                <div class="dash-quick-desc">Registrar auto</div>
+            </div>
+        </a>
+
+        <a asp-controller="Inventario" asp-action="Crear" class="dash-quick-btn" data-color="#6C6CFF">
+            <div class="dash-quick-icon" style="background:#EBEBFF;color:#6C6CFF;">
+                <i class="bi bi-box-seam"></i>
+            </div>
+            <div>
+                <div class="dash-quick-name">Agregar Repuesto</div>
+                <div class="dash-quick-desc">Inventario</div>
+            </div>
+        </a>
+
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     STOCK ALERTS (conditional)
+════════════════════════════════════════════════════════════════ -->
+@if (Model.ProductosBajoStock.Any())
+{
+    <div class="card-custom p-4 mt-3">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-exclamation-triangle-fill" style="color:var(--warning);font-size:16px;"></i>
+            <span style="font-weight:700;font-size:14px;color:var(--text);">Alertas de Stock Bajo</span>
+            <span class="badge rounded-pill" style="background:#FFF4E5;color:#B25300;font-size:11px;">@Model.ProductosBajoStock.Count</span>
+        </div>
+        <div class="row g-2">
+            @foreach (var p in Model.ProductosBajoStock)
+            {
+                <div class="col-12 col-md-6">
+                    <div class="d-flex align-items-center justify-content-between p-3 rounded-3"
+                         style="background:var(--surface2);border:1px solid var(--border);">
+                        <div>
+                            <div style="font-weight:600;font-size:14px;">@p.Nombre</div>
+                            <span class="badge bg-@p.NivelStockClase" style="font-size:11px;">
+                                @p.NivelStock — @p.Stock und.
+                            </span>
+                        </div>
+                        <a asp-controller="Inventario" asp-action="Editar" asp-route-id="@p.Id"
+                           class="btn btn-sm btn-outline-secondary">Ajustar</a>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- ════════════════════════════════════════════════════════════
+     DASHBOARD-SCOPED STYLES
+════════════════════════════════════════════════════════════════ -->
+<style>
+/* ── Page Header ── */
+.dash-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.dash-title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: #1D1D1F;
+    margin: 0;
+}
+.dash-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6E6E73;
+    font-size: 13px;
+    margin: 4px 0 0;
+}
+.dash-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34C759;
+    display: inline-block;
+    animation: pulse 2s infinite;
+}
+@@keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%       { opacity:.5; transform:scale(1.35); }
+}
+.dash-header-actions { display:flex;gap:8px;flex-wrap:wrap; }
+
+/* ── KPI Grid ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+@@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+@@media (max-width: 600px)  { .kpi-grid { grid-template-columns: 1fr; } }
+
+/* ── Glassmorphism KPI Card ── */
+.kpi-glass {
+    background: #FFFFFF;
+    border: 1px solid #D2D2D7;
+    border-radius: 16px;
+    padding: 20px 20px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    position: relative;
+    overflow: hidden;
+    color: #1D1D1F;
+}
+.kpi-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.9) 0%, rgba(245,245,247,.6) 100%);
+    pointer-events: none;
+}
+.kpi-glass:hover {
+    transform: translateY(-3px);
+    border-color: #B0B0B8;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+.kpi-glass-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--icon-bg);
+    color: var(--icon-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+.kpi-glass-body {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+.kpi-glass-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    color: #1D1D1F;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.kpi-glass-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #3A3A3C;
+    margin-top: 5px;
+}
+.kpi-glass-sub {
+    font-size: 11px;
+    color: #6E6E73;
+    margin-top: 2px;
+}
+.kpi-glass-arrow {
+    color: #AEAEB2;
+    font-size: 14px;
+    position: relative;
+    z-index: 1;
+    transition: color .2s;
+}
+.kpi-glass:hover .kpi-glass-arrow { color: #0066CC; }
+
+/* ── Charts Row ── */
+.dash-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+@@media (max-width: 1100px) { .dash-charts-row { grid-template-columns: 1fr; } }
+
+.dash-chart-card {
+    background: #FFFFFF;
+    border: 1px solid #D2D2D7;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.dash-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 22px 12px;
+    border-bottom: 1px solid #F2F2F7;
+}
+.dash-chart-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #1D1D1F;
+}
+.dash-chart-sub {
+    font-size: 12px;
+    color: #6E6E73;
+    margin-top: 2px;
+}
+.dash-chart-badge {
+    background: #F5F5F7;
+    border: 1px solid #E8E8ED;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6E6E73;
+    white-space: nowrap;
+}
+.dash-chart-body {
+    padding: 16px 20px 20px;
+    height: 260px;
+    position: relative;
+}
+.dash-chart-body canvas { width:100% !important; height:100% !important; }
+
+/* ── Quick Actions ── */
+.dash-quick-section {
+    background: #FFFFFF;
+    border: 1px solid #D2D2D7;
+    border-radius: 16px;
+    padding: 20px 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    margin-bottom: 20px;
+}
+.dash-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #6E6E73;
+    margin-bottom: 14px;
+}
+.dash-quick-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.dash-quick-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 18px;
+    border-radius: 12px;
+    border: 1.5px solid #E8E8ED;
+    background: #F5F5F7;
+    text-decoration: none;
+    color: #1D1D1F;
+    transition: border-color .2s, background .2s, transform .2s;
+    min-width: 190px;
+    flex: 1;
+}
+.dash-quick-btn:hover {
+    background: #fff;
+    border-color: attr(data-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,.06);
+}
+.dash-quick-btn:hover .dash-quick-name { color: #0066CC; }
+.dash-quick-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+.dash-quick-name {
+    font-size: 13px;
+    font-weight: 600;
+    transition: color .2s;
+}
+.dash-quick-desc {
+    font-size: 11px;
+    color: #6E6E73;
+    margin-top: 1px;
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════
+     CHART.JS — Gradient Charts
+════════════════════════════════════════════════════════════════ -->
+@section Scripts {
+<script>
+(function () {
+  'use strict';
+
+  const flujoCajaLabels = @Html.Raw(flujoCajaLabelsJson);
+  const flujoCajaData   = @Html.Raw(flujoCajaDataJson);
+  const topServLabels   = @Html.Raw(topServLabelsJson);
+  const topServData     = @Html.Raw(topServDataJson);
+
+  Chart.defaults.font.family = "'Inter', -apple-system, sans-serif";
+  Chart.defaults.font.size   = 12;
+
+  const gridColor = 'rgba(0,0,0,0.04)';
+  const textColor = '#6E6E73';
+  const blue      = '#0066CC';
+
+  // ── A: Flujo de Caja Semanal — Area Line with gradient ────────────────────
+  const ctxA = document.getElementById('chartIngresos');
+  if (ctxA) {
+    const gradA = ctxA.getContext('2d').createLinearGradient(0, 0, 0, 220);
+    gradA.addColorStop(0,   'rgba(0,102,204,0.18)');
+    gradA.addColorStop(0.6, 'rgba(0,102,204,0.04)');
+    gradA.addColorStop(1,   'rgba(0,102,204,0)');
+
+    new Chart(ctxA, {
+      type: 'line',
+      data: {
+        labels: flujoCajaLabels,
+        datasets: [{
+          label: 'Ingresos COP',
+          data: flujoCajaData,
+          borderColor: blue,
+          backgroundColor: gradA,
+          fill: true,
+          tension: 0.45,
+          borderWidth: 2.5,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: blue,
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: blue,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#fff',
+            borderColor: '#D2D2D7',
+            borderWidth: 1,
+            titleColor: '#1D1D1F',
+            bodyColor: '#3A3A3C',
+            padding: 12,
+            cornerRadius: 10,
+            callbacks: {
+              label: ctx => ' $ ' + Number(ctx.raw).toLocaleString('es-CO')
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor, drawBorder: false },
+            ticks: { color: textColor }
+          },
+          y: {
+            grid: { color: gridColor, drawBorder: false },
+            ticks: {
+              color: textColor,
+              callback: v => '$ ' + (v >= 1_000_000
+                ? (v/1_000_000).toFixed(1) + 'M'
+                : v >= 1000 ? (v/1000).toFixed(0) + 'K' : v)
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── B: Top Servicios — Horizontal Bar with gradient ───────────────────────
+  const ctxB = document.getElementById('chartServicios');
+  if (ctxB) {
+    const colors = [
+      '#0066CC','#34C759','#FF9500','#FF3B30','#6C6CFF','#5AC8FA'
+    ].slice(0, topServLabels.length);
+
+    const gradients = colors.map(hex => {
+      const g = ctxB.getContext('2d').createLinearGradient(0, 0, 300, 0);
+      g.addColorStop(0, hex);
+      g.addColorStop(1, hex + '60');
+      return g;
+    });
+
+    new Chart(ctxB, {
+      type: 'bar',
+      data: {
+        labels: topServLabels,
+        datasets: [{
+          label: 'Solicitudes',
+          data: topServData,
+          backgroundColor: gradients,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#fff',
+            borderColor: '#D2D2D7',
+            borderWidth: 1,
+            titleColor: '#1D1D1F',
+            bodyColor: '#3A3A3C',
+            padding: 10,
+            cornerRadius: 10,
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor, drawBorder: false },
+            ticks: { color: textColor, stepSize: 1 }
+          },
+          y: {
+            grid: { display: false },
+            ticks: {
+              color: '#1D1D1F',
+              font: { weight: '500' },
+              callback: function(val) {
+                const lbl = this.getLabelForValue(val);
+                return lbl && lbl.length > 18 ? lbl.slice(0, 16) + '…' : lbl;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+})();
+</script>
+}

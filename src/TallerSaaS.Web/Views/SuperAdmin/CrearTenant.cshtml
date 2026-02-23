@@ -1,0 +1,173 @@
+@using TallerSaaS.Domain.Entities
+@{ ViewData["Title"] = "Registrar Nuevo Taller"; }
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-building-add me-2" style="color:var(--primary);"></i>Registrar Taller</h1>
+    <p class="page-subtitle">Crea un nuevo workshop con su administrador inicial</p>
+  </div>
+  <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+</div>
+
+<div class="row g-4">
+  <!-- Workshop Info -->
+  <div class="col-12 col-lg-7">
+    <form asp-action="CrearTenant" method="post" id="tenantForm">
+      @Html.AntiForgeryToken()
+
+      <div class="card-custom mb-4">
+        <div style="padding:24px 28px 8px;">
+          <h6 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:20px;">
+            <i class="bi bi-buildings me-2"></i>Datos del Taller
+          </h6>
+        </div>
+        <div style="padding:0 28px 28px;">
+          <div class="mb-4">
+            <label class="form-label">Nombre del Taller *</label>
+            <input name="Nombre" class="form-control" placeholder="Ej. Taller Mecánico Los Andes" required maxlength="200" />
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">NIT / Cédula</label>
+              <input name="Nit" class="form-control" placeholder="Ej. 900.123.456-1" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ciudad</label>
+              <input name="Ciudad" class="form-control" placeholder="Ej. Bogotá, Medellín..." />
+            </div>
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Teléfono</label>
+              <input name="Telefono" class="form-control" placeholder="Ej. 601 234 5678" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Plan de Suscripción *</label>
+              <select name="PlanSuscripcionId" class="form-select" required onchange="actualizarResumenPlan(this)">
+                <option value="">Seleccionar plan...</option>
+                <option value="1" data-precio="299" data-usuarios="3">Básico — $299.000/mes · 3 usuarios</option>
+                <option value="2" data-precio="699" data-usuarios="10">Profesional — $699.000/mes · 10 usuarios</option>
+                <option value="3" data-precio="1499" data-usuarios="50">Empresarial — $1.499.000/mes · 50 usuarios</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-0">
+            <label class="form-label">Dirección</label>
+            <input name="Direccion" class="form-control" placeholder="Dirección completa del taller" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin User -->
+      <div class="card-custom mb-4">
+        <div style="padding:24px 28px 8px;">
+          <h6 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:20px;">
+            <i class="bi bi-person-gear me-2"></i>Administrador del Taller
+          </h6>
+        </div>
+        <div style="padding:0 28px 28px;">
+          <div class="mb-4">
+            <label class="form-label">Correo Electrónico *</label>
+            <input name="adminEmail" type="email" class="form-control" placeholder="admin@taller.com" required />
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Contraseña Inicial *</label>
+              <input name="adminPassword" type="password" class="form-control"
+                     placeholder="Mín. 8 caracteres" required minlength="8" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Confirmar Contraseña *</label>
+              <input name="adminPasswordConfirm" type="password" class="form-control"
+                     placeholder="Repite la contraseña" required minlength="8" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end">
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-building-add me-1"></i>Crear Taller y Administrador
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Summary Sidebar -->
+  <div class="col-12 col-lg-5">
+    <div class="card-custom p-4" style="position:sticky;top:80px;">
+      <h6 style="font-weight:700;margin-bottom:20px;">Resumen del Plan</h6>
+      <div id="plan-resumen">
+        <div style="text-align:center;padding:32px;color:var(--text-muted);">
+          <i class="bi bi-receipt" style="font-size:32px;opacity:.4;display:block;margin-bottom:8px;"></i>
+          Selecciona un plan para ver el resumen
+        </div>
+      </div>
+
+      <hr style="margin:20px 0;" />
+
+      <h6 style="font-weight:700;margin-bottom:12px;font-size:13px;">¿Qué incluye cada plan?</h6>
+      <div style="font-size:13px;color:var(--text-muted);display:flex;flex-direction:column;gap:8px;">
+        @{
+          var planes = new[]
+          {
+            new { nombre = "Básico", precio = "$299.000", icos = new[]{ "3 usuarios", "Clientes + Órdenes", "Inventario básico" } },
+            new { nombre = "Profesional", precio = "$699.000", icos = new[]{ "10 usuarios", "Reportes PDF/Excel", "Dashboard analytics" } },
+            new { nombre = "Empresarial", precio = "$1.499.000", icos = new[]{ "50 usuarios", "API + Integraciones", "Soporte prioritario" } }
+          };
+          foreach (var p in planes)
+          {
+            <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-weight:600;color:var(--text);">@p.nombre</span>
+                <span style="font-weight:700;color:var(--primary);">@p.precio/mes</span>
+              </div>
+              @foreach (var f in p.icos)
+              {
+                <div style="font-size:12px;"><i class="bi bi-check2 text-success me-1"></i>@f</div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+function actualizarResumenPlan(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) { document.getElementById('plan-resumen').innerHTML =
+    '<div style="text-align:center;padding:32px;color:var(--text-muted);"><i class="bi bi-receipt" style="font-size:32px;opacity:.4;display:block;margin-bottom:8px;"></i>Selecciona un plan para ver el resumen</div>';
+    return; }
+  const precio = parseFloat(opt.dataset.precio) * 1000;
+  const usuarios = opt.dataset.usuarios;
+  const nombre = opt.text.split('—')[0].trim();
+  document.getElementById('plan-resumen').innerHTML = `
+    <div style="text-align:center;padding:16px 0 20px;">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">Plan seleccionado</div>
+      <div style="font-size:22px;font-weight:800;color:var(--primary);">${nombre}</div>
+      <div style="font-size:28px;font-weight:900;margin-top:4px;">$${precio.toLocaleString('es-CO')}</div>
+      <div style="font-size:12px;color:var(--text-muted);">por mes · ${usuarios} usuarios</div>
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;font-size:13px;">
+      <div class="d-flex justify-content-between py-1"><span style="color:var(--text-muted);">Plan</span><strong>${nombre}</strong></div>
+      <div class="d-flex justify-content-between py-1"><span style="color:var(--text-muted);">Usuarios</span><strong>${usuarios}</strong></div>
+      <div class="d-flex justify-content-between py-1"><span style="color:var(--text-muted);">Facturación</span><strong>Mensual</strong></div>
+      <div class="d-flex justify-content-between py-1 mt-1" style="border-top:1px solid var(--border);">
+        <span style="font-weight:700;">Total/mes</span>
+        <span style="font-weight:800;color:var(--primary);">$${precio.toLocaleString('es-CO')}</span>
+      </div>
+    </div>`;
+}
+
+// Validate passwords match on submit
+document.getElementById('tenantForm').addEventListener('submit', function(e) {
+  const p1 = document.querySelector('[name=adminPassword]').value;
+  const p2 = document.querySelector('[name=adminPasswordConfirm]').value;
+  if (p1 !== p2) { e.preventDefault(); alert('Las contraseñas no coinciden.'); }
+});
+</script>
+}

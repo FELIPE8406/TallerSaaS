@@ -1,0 +1,96 @@
+@using TallerSaaS.Application.DTOs
+@model List<VehiculoDto>
+@{
+  ViewData["Title"] = "Vehículos";
+  var clientes = ViewBag.Clientes as List<ClienteDto> ?? new();
+  var clienteIdFiltro = ViewBag.ClienteId as Guid?;
+}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-car-front me-2" style="color:var(--primary);"></i>Vehículos</h1>
+    <p class="page-subtitle">@ViewBag.Total vehículos registrados</p>
+  </div>
+  <a asp-action="Crear" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo Vehículo</a>
+</div>
+
+<!-- Filter -->
+<div class="card-custom p-3 mb-4">
+  <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+    <div style="flex:1;min-width:200px;">
+      <select name="clienteId" class="form-select" onchange="this.form.submit()">
+        <option value="">Todos los clientes</option>
+        @foreach (var c in clientes)
+{
+    @:<option value="@c.Id" @(c.Id == clienteIdFiltro ? "selected" : "")>@c.NombreCompleto</option>
+}
+      </select>
+    </div>
+    @if (clienteIdFiltro.HasValue)
+    {
+      <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+    }
+  </form>
+</div>
+
+<!-- Table -->
+<div class="card-custom">
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Vehículo</th>
+          <th class="d-none d-md-table-cell">Placa</th>
+          <th class="d-none d-md-table-cell">Cliente</th>
+          <th class="d-none d-lg-table-cell">VIN</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var v in Model)
+        {
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:40px;height:40px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--primary);">
+                  <i class="bi bi-car-front"></i>
+                </div>
+                <div>
+                  <div style="font-weight:600;">@v.Marca @v.Modelo</div>
+                  <div style="font-size:12px;color:var(--text-muted);">@v.Anio @(v.Color != null ? $"· {v.Color}" : "")</div>
+                </div>
+              </div>
+            </td>
+            <td class="d-none d-md-table-cell">
+              @if (!string.IsNullOrEmpty(v.Placa))
+              {
+                <span style="font-family:monospace;font-weight:700;letter-spacing:.05em;background:var(--surface2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);">@v.Placa</span>
+              }
+              else { <span style="color:var(--text-muted);">—</span> }
+            </td>
+            <td class="d-none d-md-table-cell" style="color:var(--text-secondary);">@v.ClienteNombre</td>
+            <td class="d-none d-lg-table-cell" style="font-family:monospace;font-size:12px;color:var(--text-muted);">@(v.VIN ?? "—")</td>
+            <td>
+              <div class="d-flex gap-1">
+                <a asp-action="Editar" asp-route-id="@v.Id" class="btn btn-sm btn-outline-secondary" title="Editar"><i class="bi bi-pencil"></i></a>
+                <a asp-controller="Ordenes" asp-action="Crear" class="btn btn-sm btn-outline-secondary" title="Nueva Orden"><i class="bi bi-file-earmark-plus"></i></a>
+                <form asp-action="Eliminar" method="post" onsubmit="event.preventDefault(); confirmarEliminar(this, '@v.Marca @v.Modelo')">
+                  @Html.AntiForgeryToken()
+                  <input type="hidden" name="id" value="@v.Id" />
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        }
+        @if (!Model.Any())
+        {
+          <tr><td colspan="5" class="text-center py-5" style="color:var(--text-muted);">
+            <i class="bi bi-car-front" style="font-size:48px;opacity:.3;display:block;margin-bottom:12px;"></i>
+            No hay vehículos registrados.
+          </td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

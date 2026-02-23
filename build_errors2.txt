@@ -1,0 +1,12 @@
+﻿  Determinando los proyectos que se van a restaurar...
+C:\Program Files\dotnet\sdk\9.0.203\NuGet.targets(1307,5): error MSB4006: Existe una dependencia circular en el gr├ífico de dependencias de destino en la que est├í involucrado el destino "_GenerateRestoreProjectPathWalk". [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Infrastructure\TallerSaaS.Infrastructure.csproj]
+
+ERROR al compilar.
+
+C:\Program Files\dotnet\sdk\9.0.203\NuGet.targets(1307,5): error MSB4006: Existe una dependencia circular en el gr├ífico de dependencias de destino en la que est├í involucrado el destino "_GenerateRestoreProjectPathWalk". [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Infrastructure\TallerSaaS.Infrastructure.csproj]
+    0 Advertencia(s)
+    1 Errores
+
+Tiempo transcurrido 00:00:00.52
+
+Hay actualizaciones de carga de trabajo disponibles. Ejecute "dotnet workload list" para obtener m├ís informaci├│n.

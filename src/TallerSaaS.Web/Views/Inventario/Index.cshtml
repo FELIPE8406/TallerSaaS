@@ -1,0 +1,129 @@
+@using TallerSaaS.Application.DTOs
+@model List<InventarioDto>
+@{ ViewData["Title"] = "Inventario"; }
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-box-seam-fill me-2" style="color:var(--primary);"></i>Inventario</h1>
+    <p class="page-subtitle">
+      @Model.Count productos
+      @if (ViewBag.AlertasBajoStock > 0)
+      {
+        <span class="badge bg-danger ms-2">⚠ @ViewBag.AlertasBajoStock bajo stock</span>
+      }
+    </p>
+  </div>
+  <a asp-action="Crear" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Agregar Producto</a>
+</div>
+
+<!-- Filters -->
+<div class="card-custom p-3 mb-4">
+  <form method="get" class="d-flex flex-wrap gap-2">
+    <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control" style="max-width:280px;" placeholder="Buscar producto o SKU..." />
+    <select name="categoria" class="form-select" style="max-width:200px;">
+      <option value="">Todas las categorias</option>
+      @foreach (var cat in (ViewBag.Categorias as List<string> ?? new()))
+      {
+        <option value="@cat" selected="@(ViewBag.CategoriaFiltro == cat)">@cat</option>
+      }
+    </select>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>Filtrar</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Limpiar</a>
+  </form>
+</div>
+
+<div class="card-custom">
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th class="d-none d-md-table-cell">SKU</th>
+          <th class="d-none d-lg-table-cell">Categoria</th>
+          <th>Stock</th>
+          <th class="d-none d-lg-table-cell">Precio Venta</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var p in Model)
+        {
+          <tr>
+            <td>
+              <div style="font-weight:600;">@p.Nombre</div>
+              @if (!string.IsNullOrEmpty(p.Descripcion))
+              {
+                <div style="font-size:12px;color:var(--text-muted);">@p.Descripcion</div>
+              }
+            </td>
+            <td class="d-none d-md-table-cell" style="color:var(--text-muted);font-size:13px;font-family:monospace;">@p.SKU</td>
+            <td class="d-none d-lg-table-cell">
+              @if (!string.IsNullOrEmpty(p.Categoria))
+              {
+                <span class="badge bg-secondary">@p.Categoria</span>
+              }
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-@(p.NivelStock == "OK" ? "check-circle-fill text-success" : p.NivelStock == "Bajo" ? "exclamation-triangle-fill text-warning" : "x-circle-fill text-danger")"></i>
+                <div>
+                  <strong>@p.Stock</strong>
+                  <div style="font-size:11px;color:var(--text-muted);">min: @p.StockMinimo</div>
+                </div>
+                <div class="stock-bar">
+                  <div class="fill bg-@p.NivelStockClase" style="width:@(Math.Min(100, p.StockMinimo > 0 ? (int)((double)p.Stock / p.StockMinimo * 100) : 100))%"></div>
+                </div>
+              </div>
+            </td>
+            <td class="d-none d-lg-table-cell"><strong>$@p.PrecioVenta.ToString("N2")</strong></td>
+            <td>
+              <div class="d-flex gap-1">
+                <a asp-action="Editar" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                <button type="button" class="btn btn-sm btn-outline-success"
+                  onclick="ajustarStock('@p.Id','entrada')" title="Entrada de stock"><i class="bi bi-plus-lg"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-warning"
+                  onclick="ajustarStock('@p.Id','salida')" title="Salida de stock"><i class="bi bi-dash-lg"></i></button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Hidden form for stock adjustment -->
+<form id="formStock" asp-action="AjustarStock" method="post" style="display:none;">
+  @Html.AntiForgeryToken()
+  <input type="hidden" id="stockId" name="id" />
+  <input type="hidden" id="stockTipo" name="tipo" />
+  <input type="hidden" id="stockCantidad" name="cantidad" />
+</form>
+
+@section Scripts {
+<script>
+function ajustarStock(id, tipo) {
+  Swal.fire({
+    title: tipo === 'entrada' ? 'Entrada de Stock' : 'Salida de Stock',
+    html: `<input type="number" id="cantInput" class="swal2-input" placeholder="Cantidad" min="1" value="1">`,
+    icon: tipo === 'entrada' ? 'success' : 'warning',
+    confirmButtonColor: tipo === 'entrada' ? '#2e7d32' : '#f9a825',
+    confirmButtonText: 'Confirmar',
+    cancelButtonText: 'Cancelar',
+    showCancelButton: true,
+    preConfirm: () => {
+      const v = parseInt(document.getElementById('cantInput').value);
+      if (!v || v <= 0) { Swal.showValidationMessage('Ingresa una cantidad valida'); return false; }
+      return v;
+    }
+  }).then(r => {
+    if (r.isConfirmed) {
+      document.getElementById('stockId').value = id;
+      document.getElementById('stockTipo').value = tipo;
+      document.getElementById('stockCantidad').value = r.value;
+      document.getElementById('formStock').submit();
+    }
+  });
+}
+</script>
+}

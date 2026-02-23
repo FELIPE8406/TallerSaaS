@@ -1,0 +1,19 @@
+﻿  Determinando los proyectos que se van a restaurar...
+  Todos los proyectos est├ín actualizados para la restauraci├│n.
+  TallerSaaS.Shared -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Shared\bin\Debug\net9.0\TallerSaaS.Shared.dll
+  TallerSaaS.Domain -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.dll
+  TallerSaaS.Application -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\bin\Debug\net9.0\TallerSaaS.Application.dll
+  TallerSaaS.Infrastructure -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Infrastructure\bin\Debug\net9.0\TallerSaaS.Infrastructure.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Views\Shared\Error.cshtml(1,8): error CS0246: El nombre del tipo o del espacio de nombres 'ErrorViewModel' no se encontr├│ (┬┐falta una directiva using o una referencia de ensamblado?) [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\Microsoft.CodeAnalysis.Razor.Compiler\Microsoft.NET.Sdk.Razor.SourceGenerators.RazorSourceGenerator\Views_Shared_Error_cshtml.g.cs(104,71): error CS0246: El nombre del tipo o del espacio de nombres 'ErrorViewModel' no se encontr├│ (┬┐falta una directiva using o una referencia de ensamblado?) [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+
+ERROR al compilar.
+
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Views\Shared\Error.cshtml(1,8): error CS0246: El nombre del tipo o del espacio de nombres 'ErrorViewModel' no se encontr├│ (┬┐falta una directiva using o una referencia de ensamblado?) [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\Microsoft.CodeAnalysis.Razor.Compiler\Microsoft.NET.Sdk.Razor.SourceGenerators.RazorSourceGenerator\Views_Shared_Error_cshtml.g.cs(104,71): error CS0246: El nombre del tipo o del espacio de nombres 'ErrorViewModel' no se encontr├│ (┬┐falta una directiva using o una referencia de ensamblado?) [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+    0 Advertencia(s)
+    2 Errores
+
+Tiempo transcurrido 00:00:05.10
+
+Hay actualizaciones de carga de trabajo disponibles. Ejecute "dotnet workload list" para obtener m├ís informaci├│n.

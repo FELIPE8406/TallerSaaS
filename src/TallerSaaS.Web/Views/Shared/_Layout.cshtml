@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="TallerSaaS – Sistema de Gestión para Talleres Automotrices en Colombia" />
+  <title>@ViewData["Title"] - TallerSaaS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+  @if (User.Identity?.IsAuthenticated == true)
+  {
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">T</div>
+        <span class="logo-text">TallerSaaS</span>
+      </div>
+      <nav class="sidebar-nav">
+        @if (User.IsInRole("SuperAdmin"))
+        {
+          <div class="sidebar-section-title">Administración</div>
+          <a asp-controller="SuperAdmin" asp-action="Index"
+             class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "SuperAdmin" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">
+            <i class="bi bi-speedometer2 nav-icon"></i><span class="nav-label">Panel Global</span>
+          </a>
+          <a asp-controller="SuperAdmin" asp-action="Tenants"
+             class="nav-item-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Tenants" ? "active" : "")">
+            <i class="bi bi-buildings nav-icon"></i><span class="nav-label">Talleres</span>
+          </a>
+          <a asp-controller="SuperAdmin" asp-action="Planes"
+             class="nav-item-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Planes" ? "active" : "")">
+            <i class="bi bi-card-list nav-icon"></i><span class="nav-label">Planes</span>
+          </a>
+          <a asp-controller="SuperAdmin" asp-action="Pagos"
+             class="nav-item-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Pagos" ? "active" : "")">
+            <i class="bi bi-credit-card nav-icon"></i><span class="nav-label">Pagos</span>
+          </a>
+        }
+        else
+        {
+          <div class="sidebar-section-title">General</div>
+          <a asp-controller="Dashboard" asp-action="Index"
+             class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+            <i class="bi bi-speedometer2 nav-icon"></i><span class="nav-label">Dashboard</span>
+          </a>
+          <a asp-controller="Clientes" asp-action="Index"
+             class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Clientes" ? "active" : "")">
+            <i class="bi bi-people nav-icon"></i><span class="nav-label">Clientes</span>
+          </a>
+          <a asp-controller="Vehiculos" asp-action="Index"
+             class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Vehiculos" ? "active" : "")">
+            <i class="bi bi-car-front nav-icon"></i><span class="nav-label">Vehículos</span>
+          </a>
+          <div class="sidebar-section-title">Operaciones</div>
+          <a asp-controller="Ordenes" asp-action="Index"
+             class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Ordenes" ? "active" : "")">
+            <i class="bi bi-file-earmark-text nav-icon"></i><span class="nav-label">Órdenes</span>
+          </a>
+          <a asp-controller="Inventario" asp-action="Index"
+             class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Inventario" ? "active" : "")">
+            <i class="bi bi-box-seam nav-icon"></i><span class="nav-label">Inventario</span>
+          </a>
+          <div class="sidebar-section-title">Reportes</div>
+          <a asp-controller="Reportes" asp-action="ClientesExcel" class="nav-item-link">
+            <i class="bi bi-file-earmark-excel nav-icon"></i><span class="nav-label">Exportar Clientes</span>
+          </a>
+          <a asp-controller="Reportes" asp-action="VentasExcel" class="nav-item-link">
+            <i class="bi bi-file-earmark-spreadsheet nav-icon"></i><span class="nav-label">Exportar Ventas</span>
+          </a>
+        }
+      </nav>
+      <div class="sidebar-footer">
+        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="nav-item-link w-100" style="background:none;border:none;text-align:left;cursor:pointer;color:#FF3B30;">
+            <i class="bi bi-box-arrow-left nav-icon"></i>
+            <span class="nav-label">Cerrar Sesión</span>
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <button class="btn-toggle-sidebar" onclick="toggleSidebar()" aria-label="Menú">
+          <i class="bi bi-list"></i>
+        </button>
+        <div class="topbar-right">
+          <div class="user-pill">
+            <div class="user-avatar">@(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")</div>
+            <div class="d-none d-md-block">
+              <div class="user-name">@User.Identity?.Name</div>
+              <div class="user-role">
+                @if (User.IsInRole("SuperAdmin")) { <text>Super Admin</text> }
+                else if (User.IsInRole("Admin")) { <text>Administrador</text> }
+                else { <text>Mecánico</text> }
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        @if (TempData["Exito"] != null)
+        {
+          <div class="alert alert-success alert-flash">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["Exito"]
+          </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+          <div class="alert alert-danger alert-flash">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>@TempData["Error"]
+          </div>
+        }
+        @RenderBody()
+      </main>
+    </div>
+  }
+  else
+  {
+    @RenderBody()
+  }
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="~/js/site.js" asp-append-version="true"></script>
+  @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
