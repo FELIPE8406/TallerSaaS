@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TallerSaaS.Domain.Entities;
 
 namespace TallerSaaS.Application.Interfaces;
@@ -17,6 +18,12 @@ public interface IApplicationDbContext
     DbSet<Tenant> Tenants { get; }
     DbSet<PlanSuscripcion> PlanesSuscripcion { get; }
     DbSet<Pago> Pagos { get; }
+    DbSet<Factura> Facturas { get; }
+    DbSet<EventoTrazabilidad> EventosTrazabilidad { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Exposes the EF change tracker entry for a given entity instance,
+    /// enabling ReloadAsync() during DbUpdateConcurrencyException handling.</summary>
+    EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
 }

@@ -7,23 +7,26 @@ using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Web.Controllers;
 
-[Authorize(Roles = "Admin,Mecanico")]
+[Authorize(Roles = "Admin,Mecanico,SuperAdmin")]
 public class OrdenesController : Controller
 {
     private readonly OrdenService _ordenService;
     private readonly ClienteService _clienteService;
     private readonly VehiculoService _vehiculoService;
     private readonly ICurrentTenantService _tenantService;
+    private readonly ILogger<OrdenesController> _logger;
 
     public OrdenesController(OrdenService ordenSvc,
                              ClienteService clienteSvc,
                              VehiculoService vehiculoSvc,
-                             ICurrentTenantService tenantService)
+                             ICurrentTenantService tenantService,
+                             ILogger<OrdenesController> logger)
     {
         _ordenService    = ordenSvc;
         _clienteService  = clienteSvc;
         _vehiculoService = vehiculoSvc;
         _tenantService   = tenantService;
+        _logger          = logger;
     }
 
     public async Task<IActionResult> Index(int? estado)
@@ -72,6 +75,45 @@ public class OrdenesController : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AgregarItemJson(Guid ordenId, ItemOrdenDto dto)
+    {
+        try
+        {
+            await _ordenService.AddItemAsync(ordenId, dto);
+            var orden = await _ordenService.GetByIdAsync(ordenId);
+            if (orden == null)
+                return Json(new { ok = false, error = $"Ítem guardado pero orden {ordenId} no se pudo releer. Recarga la página." });
+
+            return Json(new { ok = true, orden });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Json(new { ok = false, error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // Log the real exception — visible in dotnet run console and VS Output
+            _logger.LogError(ex, "Error en AgregarItemJson para orden {OrdenId}. DTO: Desc={Desc} Tipo={Tipo} Cant={Cant} Precio={Precio}",
+                ordenId, dto.Descripcion, dto.Tipo, dto.Cantidad, dto.PrecioUnitario);
+
+            // Return real message to UI so user can see root cause
+            return Json(new { ok = false, error = $"[{ex.GetType().Name}] {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// AJAX endpoint: returns current order state (items + totals) as JSON.
+    /// Used by EliminarItem redirect to refresh the table.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetOrdenJson(Guid id)
+    {
+        var orden = await _ordenService.GetByIdAsync(id);
+        if (orden == null) return NotFound();
+        return Json(orden);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> EliminarItem(Guid ordenId, Guid itemId)
     {
         await _ordenService.RemoveItemAsync(ordenId, itemId);
@@ -84,3 +126,4 @@ public class OrdenesController : Controller
         return RedirectToAction("FacturaPdf", "Reportes", new { ordenId = id });
     }
 }
+

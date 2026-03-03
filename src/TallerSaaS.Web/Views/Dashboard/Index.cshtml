@@ -35,9 +35,45 @@
         </p>
     </div>
     <div class="dash-header-actions">
-        <a asp-controller="Reportes" asp-action="VentasExcel" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-down-circle me-1"></i>Exportar
-        </a>
+        <!-- iOS-Style Share / Export Button -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-1"
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <!-- iOS Share icon SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                     stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                    <polyline points="16 6 12 2 8 6"/>
+                    <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+                Exportar
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius:12px;">
+                <li><h6 class="dropdown-header">Reportes</h6></li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Facturas" asp-action="DescargarExcel">
+                        📊 Facturas Excel Pro
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Reportes" asp-action="VentasExcel">
+                        📈 Ventas Excel
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Reportes" asp-action="ClientesExcel">
+                        👥 Clientes Excel
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Facturas" asp-action="Index">
+                        🧾 Ver Facturas
+                    </a>
+                </li>
+            </ul>
+        </div>
         <a asp-controller="Ordenes" asp-action="Crear" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-lg me-1"></i>Nueva Orden
         </a>
@@ -184,6 +220,16 @@
             <div>
                 <div class="dash-quick-name">Agregar Repuesto</div>
                 <div class="dash-quick-desc">Inventario</div>
+            </div>
+        </a>
+
+        <a asp-controller="Facturas" asp-action="Nueva" class="dash-quick-btn" data-color="#FF9F0A">
+            <div class="dash-quick-icon" style="background:#FFF5E0;color:#FF9F0A;">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <div>
+                <div class="dash-quick-name">Nueva Factura</div>
+                <div class="dash-quick-desc">Facturar orden</div>
             </div>
         </a>
 
@@ -350,6 +396,25 @@
     transition: color .2s;
 }
 .kpi-glass:hover .kpi-glass-arrow { color: #0066CC; }
+
+/* ── Glass Card (generic, used in Facturas / Timeline views) ── */
+.glass-card {
+    background: rgba(255,255,255,0.82);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+
+/* ── Badge: Facturada ── */
+.badge-facturada {
+    background-color: #5856D6;
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
 
 /* ── Charts Row ── */
 .dash-charts-row {

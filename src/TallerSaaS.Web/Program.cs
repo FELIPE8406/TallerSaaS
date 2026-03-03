@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using TallerSaaS.Application.Interfaces;
@@ -7,10 +10,15 @@ using TallerSaaS.Domain.Interfaces;
 using TallerSaaS.Infrastructure.Data;
 using TallerSaaS.Infrastructure.Middleware;
 using TallerSaaS.Infrastructure.Repositories;
+using TallerSaaS.Infrastructure.Services;
+using TallerSaaS.Web.Infrastructure;
 
-// ─── Colombian locale: COP currency, dot-thousands, comma-decimal ─────────────
+// ─── Cultures: es-CO for DISPLAY only; model binder uses InvariantCulture ───────
+// HTML <input type="number"> always sends dot-decimal (87500.50), not comma.
+// Setting thread culture to es-CO causes decimal model binding to silently fail
+// (PrecioUnitario, Cantidad → 0). We keep es-CO for ToString/formatting only.
 var copCulture = new CultureInfo("es-CO");
-CultureInfo.DefaultThreadCurrentCulture = copCulture;
+CultureInfo.DefaultThreadCurrentCulture   = copCulture;
 CultureInfo.DefaultThreadCurrentUICulture = copCulture;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,7 +38,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.SignIn.RequireConfirmedAccount = false;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
+.AddDefaultTokenProviders()
+.AddClaimsPrincipalFactory<TenantClaimsFactory>();
 
 // ─── Authentication / Authorization ──────────────────────────────────────────
 builder.Services.ConfigureApplicationCookie(options =>
@@ -52,14 +61,31 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
 // ─── Application Services ────────────────────────────────────────────────────
 builder.Services.AddScoped<ClienteService>();
 builder.Services.AddScoped<VehiculoService>();
-builder.Services.AddScoped<OrdenService>();
+builder.Services.AddScoped<TrazabilidadService>();
 builder.Services.AddScoped<InventarioService>();
+builder.Services.AddScoped<OrdenService>();
+builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<ReporteService>();
 
-// ─── MVC ──────────────────────────────────────────────────────────────────────
-builder.Services.AddControllersWithViews();
+// ─── MVC — model binder uses InvariantCulture for all numeric types ───────────
+// This ensures HTML number inputs (always dot-decimal) bind correctly even when
+// the thread culture is es-CO (comma-decimal). Display formatting is unaffected.
+builder.Services.AddControllersWithViews(options =>
+{
+    // Parse decimal/double/float with InvariantCulture (dot-decimal)
+    // so HTML number inputs work correctly regardless of thread culture (es-CO)
+    options.ModelBinderProviders.Insert(0, new InvariantDecimalModelBinderProvider());
+});
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromHours(8);
+    options.Cookie.IsEssential = true;
+    options.Cookie.HttpOnly = true;
+});
+
+builder.Services.AddDistributedMemoryCache();
 
 var app = builder.Build();
 
@@ -85,7 +111,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
+app.UseSession();   // ← must be before Authentication
 app.UseAuthentication();
 app.UseMiddleware<TenantMiddleware>();   // ← Tenant detection AFTER auth
 app.UseAuthorization();

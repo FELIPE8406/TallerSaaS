@@ -119,6 +119,30 @@
             <i class="bi bi-exclamation-circle-fill me-2"></i>@TempData["Error"]
           </div>
         }
+        @{
+          var soporteTenantNombre = Context.Session.GetString("ImpersonatedTenantNombre");
+        }
+        @if (!string.IsNullOrEmpty(soporteTenantNombre))
+        {
+          <div style="background:linear-gradient(90deg,#FF9F0A,#FF6B00);color:#fff;
+                      padding:8px 20px;border-radius:10px;margin-bottom:14px;
+                      display:flex;align-items:center;justify-content:space-between;
+                      font-size:13px;font-weight:600;box-shadow:0 3px 12px rgba(255,149,0,.3);">
+            <span>
+              🛡&nbsp; <strong>Modo Soporte activo</strong> —
+              Navegando como: <em>@soporteTenantNombre</em>
+            </span>
+            <form asp-controller="SuperAdmin" asp-action="TerminarSoporte"
+                  method="post" style="margin:0;">
+              @Html.AntiForgeryToken()
+              <button type="submit"
+                      style="background:rgba(255,255,255,0.25);color:#fff;border:1.5px solid rgba(255,255,255,0.5);
+                             border-radius:8px;padding:4px 14px;font-size:12px;font-weight:700;cursor:pointer;">
+                Terminar Soporte ✕
+              </button>
+            </form>
+          </div>
+        }
         @RenderBody()
       </main>
     </div>

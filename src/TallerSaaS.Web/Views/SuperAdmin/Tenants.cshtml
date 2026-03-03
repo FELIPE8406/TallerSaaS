@@ -1,0 +1,258 @@
+@model List<TallerSaaS.Domain.Entities.Tenant>
+@{
+    ViewData["Title"] = "Talleres — Gestión Global";
+    var activos = Model.Count(t => t.Activo);
+    var inactivos = Model.Count(t => !t.Activo);
+}
+
+<!-- ═══ Page Header ══════════════════════════════════════════════════════════ -->
+<div class="sa-page-header">
+    <div>
+        <div class="sa-eyebrow">
+            <i class="bi bi-buildings"></i> SuperAdmin · Talleres
+        </div>
+        <h1 class="sa-title">Talleres Registrados</h1>
+        <p class="sa-subtitle">
+            <span class="me-3">
+                <span class="fw-bold text-success">@activos</span> activos
+            </span>
+            <span>
+                <span class="fw-bold text-danger">@inactivos</span> inactivos
+            </span>
+        </p>
+    </div>
+    <div class="sa-header-actions">
+        <!-- iOS-Style Share / Export dropdown -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-1"
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                    <polyline points="16 6 12 2 8 6"/>
+                    <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+                Exportar
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius:12px;min-width:200px;">
+                <li><h6 class="dropdown-header">Reportes Globales</h6></li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Facturas" asp-action="DescargarExcel">
+                        📊 Facturas Excel Pro
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Reportes" asp-action="VentasExcel">
+                        📈 Ventas Excel
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Reportes" asp-action="ClientesExcel">
+                        👥 Clientes Excel
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <a asp-action="NuevoTenant" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Taller
+        </a>
+    </div>
+</div>
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4" style="border-radius:12px;">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- ═══ Stats Cards ══════════════════════════════════════════════════════════ -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="glass-card p-4 text-center">
+            <div style="font-size:2rem;font-weight:800;color:#0A84FF;">@Model.Count</div>
+            <div class="text-muted small mt-1">Total Talleres</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-card p-4 text-center">
+            <div style="font-size:2rem;font-weight:800;color:#34C759;">@activos</div>
+            <div class="text-muted small mt-1">Activos</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-card p-4 text-center">
+            <div style="font-size:2rem;font-weight:800;color:#FF453A;">@inactivos</div>
+            <div class="text-muted small mt-1">Suspendidos</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-card p-4 text-center">
+            <div style="font-size:2rem;font-weight:800;color:#FF9F0A;">
+                @Model.Count(t => t.PlanSuscripcion != null)
+            </div>
+            <div class="text-muted small mt-1">Con Plan Activo</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Tenants Table ════════════════════════════════════════════════════════ -->
+<div class="glass-card">
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-buildings" style="font-size:3rem;opacity:.2;"></i>
+            <p class="mt-3">No hay talleres registrados aún.</p>
+            <a asp-action="NuevoTenant" class="btn btn-primary btn-sm">Registrar el primero</a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tenantsTable">
+                <thead style="background:#1C1C1E;color:#fff;">
+                    <tr>
+                        <th class="ps-4 py-3">Taller</th>
+                        <th class="py-3">Plan</th>
+                        <th class="py-3">Estado</th>
+                        <th class="py-3">Fecha Alta</th>
+                        <th class="py-3 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model)
+                    {
+                        <tr class="tenant-row @(t.Activo ? "" : "table-secondary opacity-75")">
+                            <!-- Nombre del Taller -->
+                            <td class="ps-4 py-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:#EBF4FF;
+                                                display:flex;align-items:center;justify-content:center;
+                                                font-weight:800;font-size:15px;color:#0A84FF;flex-shrink:0;">
+                                        @t.Nombre.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold" style="color:#1C1C1E;">@t.Nombre</div>
+                                        <small class="text-muted">@(t.Email ?? t.RFC ?? "Sin contacto")</small>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Plan -->
+                            <td>
+                                @if (t.PlanSuscripcion != null)
+                                {
+                                    var planColor = t.PlanSuscripcion.Nombre.Contains("Bás") ? "#0A84FF"
+                                                  : t.PlanSuscripcion.Nombre.Contains("Pro") ? "#34C759"
+                                                  : "#FF9F0A";
+                                    <span style="background:@planColor;color:#fff;padding:3px 10px;
+                                                 border-radius:20px;font-size:11px;font-weight:600;">
+                                        @t.PlanSuscripcion.Nombre
+                                    </span>
+                                    <div class="text-muted" style="font-size:11px;margin-top:2px;">
+                                        $@t.PlanSuscripcion.Precio.ToString("N0")/mes
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span style="background:#F5F5F7;color:#6E6E73;padding:3px 10px;
+                                                 border-radius:20px;font-size:11px;">Sin plan</span>
+                                }
+                            </td>
+
+                            <!-- Estado Suscrito / Vencido -->
+                            <td>
+                                @if (t.Activo)
+                                {
+                                    <span class="d-flex align-items-center gap-1" style="width:fit-content;
+                                          background:#E9F7EF;color:#1A7A3F;padding:4px 10px;
+                                          border-radius:20px;font-size:11px;font-weight:600;">
+                                        <span style="width:6px;height:6px;border-radius:50%;background:#34C759;display:inline-block;"></span>
+                                        Suscrito
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="d-flex align-items-center gap-1" style="width:fit-content;
+                                          background:#FEF0F0;color:#CC2200;padding:4px 10px;
+                                          border-radius:20px;font-size:11px;font-weight:600;">
+                                        <span style="width:6px;height:6px;border-radius:50%;background:#FF453A;display:inline-block;"></span>
+                                        Vencido
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Fecha Alta -->
+                            <td>
+                                <div style="font-size:13px;color:#3A3A3C;">
+                                    @t.FechaAlta.ToString("dd/MM/yyyy")
+                                </div>
+                                <small class="text-muted">@t.FechaAlta.ToString("HH:mm")</small>
+                            </td>
+
+                            <!-- Acciones -->
+                            <td class="text-center pe-3">
+                                <div class="d-flex justify-content-center gap-1 flex-wrap">
+
+                                    <!-- 🛡 Acceso de Soporte -->
+                                    <form asp-action="AccesoSoporte" asp-controller="SuperAdmin"
+                                          method="post" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="tenantId" value="@t.Id" />
+                                        <button type="submit"
+                                                class="btn btn-sm btn-primary"
+                                                title="Entrar al dashboard de este taller como Soporte"
+                                                style="border-radius:8px;font-size:11px;padding:4px 10px;">
+                                            🛡 Acceso de Soporte
+                                        </button>
+                                    </form>
+
+                                    <!-- Toggle Activo / Suspender -->
+                                    <form asp-action="ToggleActivo" asp-controller="SuperAdmin"
+                                          method="post" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@t.Id" />
+                                        <button type="submit"
+                                                class="btn btn-sm @(t.Activo ? "btn-outline-danger" : "btn-outline-success")"
+                                                style="border-radius:8px;font-size:11px;padding:4px 10px;">
+                                            @(t.Activo ? "Suspender" : "Activar")
+                                        </button>
+                                    </form>
+
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- ═══ Scoped Styles ════════════════════════════════════════════════════════ -->
+<style>
+.glass-card {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(210,210,215,0.6);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.sa-page-header {
+    display:flex;align-items:flex-start;justify-content:space-between;
+    margin-bottom:28px;flex-wrap:wrap;gap:12px;
+}
+.sa-eyebrow {
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+    color:#0066CC;background:#EBF4FF;padding:4px 10px;border-radius:20px;margin-bottom:6px;
+}
+.sa-title   { font-size:22px;font-weight:800;letter-spacing:-.04em;color:#1D1D1F;margin:0; }
+.sa-subtitle{ font-size:13px;color:#6E6E73;margin:4px 0 0; }
+.sa-header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.tenant-row:hover { background: rgba(0,122,255,0.025) !important; }
+</style>

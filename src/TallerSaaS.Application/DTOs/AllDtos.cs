@@ -49,7 +49,44 @@ public class OrdenDto
     public decimal IVA { get; set; }
     public decimal Total { get; set; }
     public bool Pagada { get; set; }
+    public bool Bloqueada { get; set; }
+    public Guid? FacturaId { get; set; }
     public List<ItemOrdenDto> Items { get; set; } = new();
+}
+
+public class FacturaDto
+{
+    public Guid Id { get; set; }
+    public string NumeroFactura { get; set; } = string.Empty;
+    public DateTime FechaEmision { get; set; }
+    public decimal Subtotal { get; set; }
+    public decimal Descuento { get; set; }
+    public decimal IVA { get; set; }
+    public decimal Total { get; set; }
+    public string? CodigoQR { get; set; }
+    public bool FirmadaDigitalmente { get; set; }
+    public string? Observaciones { get; set; }
+    public List<OrdenDto> Ordenes { get; set; } = new();
+}
+
+public class EventoTrazabilidadDto
+{
+    public Guid Id { get; set; }
+    public Guid VehiculoId { get; set; }
+    public int Tipo { get; set; }
+    public string TipoIcono { get; set; } = string.Empty;
+    public string TipoClase { get; set; } = string.Empty;
+    public string Descripcion { get; set; } = string.Empty;
+    public Guid ReferenciaId { get; set; }
+    public DateTime FechaEvento { get; set; }
+}
+
+public class TimelineVehiculoDto
+{
+    public Guid VehiculoId { get; set; }
+    public string VehiculoDescripcion { get; set; } = string.Empty;
+    public string? ClienteNombre { get; set; }
+    public List<EventoTrazabilidadDto> Eventos { get; set; } = new();
 }
 
 public class ItemOrdenDto

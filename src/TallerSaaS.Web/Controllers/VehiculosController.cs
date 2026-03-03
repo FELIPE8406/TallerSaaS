@@ -6,7 +6,7 @@ using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Web.Controllers;
 
-[Authorize(Roles = "Admin,Mecanico")]
+[Authorize(Roles = "Admin,Mecanico,SuperAdmin")]
 public class VehiculosController : Controller
 {
     private readonly VehiculoService _vehiculoService;

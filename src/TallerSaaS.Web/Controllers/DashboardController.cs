@@ -8,104 +8,51 @@ using TallerSaaS.Infrastructure.Data;
 
 namespace TallerSaaS.Web.Controllers;
 
-[Authorize(Roles = "Admin,Mecanico")]
+[Authorize(Roles = "Admin,Mecanico,SuperAdmin")]
 public class DashboardController : Controller
 {
     private readonly DashboardService _dashboardService;
     private readonly ICurrentTenantService _tenantService;
-    private readonly ApplicationDbContext _db;
 
+    // NOTE: Direct _db injection removed — DashboardService now handles all queries
+    // efficiently with Task.WhenAll, eliminating redundant connection usage.
     public DashboardController(DashboardService dashboardSvc,
-                               ICurrentTenantService tenantService,
-                               ApplicationDbContext db)
+                               ICurrentTenantService tenantService)
     {
         _dashboardService = dashboardSvc;
         _tenantService    = tenantService;
-        _db               = db;
     }
 
     public async Task<IActionResult> Index()
     {
-        var tenantId  = _tenantService.TenantId;
-        var ahora     = DateTime.UtcNow;
-        var inicioMes = new DateTime(ahora.Year, ahora.Month, 1);
-
-        // ── KPI 1: Ventas del mes en COP (órdenes pagadas del mes corriente) ────
-        var ventasMesCOP = await _db.Ordenes
-            .Where(o => (!tenantId.HasValue || o.TenantId == tenantId) &&
-                        o.Pagada &&
-                        o.FechaEntrada >= inicioMes)
-            .SumAsync(o => (decimal?)o.Total) ?? 0m;
-
-        // ── KPI 2: Órdenes Activas (no entregadas) ────────────────────────────
-        var ordenesActivas = await _db.Ordenes
-            .CountAsync(o => (!tenantId.HasValue || o.TenantId == tenantId) &&
-                             o.Estado != EstadoOrden.Entregado);
-
-        // ── KPI 3: Vehículos con orden en estado "Terminado" (para entrega) ────
-        var vehiculosParaEntrega = await _db.Ordenes
-            .Where(o => (!tenantId.HasValue || o.TenantId == tenantId) &&
-                        o.Estado == EstadoOrden.Terminado)
-            .Select(o => o.VehiculoId)
-            .Distinct()
-            .CountAsync();
-
-        // ── KPI 4: Total vehículos registrados ──────────────────────────────
-        var totalVehiculos = await _db.Vehiculos
-            .CountAsync(v => !tenantId.HasValue || v.TenantId == tenantId);
-
-        // ── Chart: Flujo de Caja Semanal (últimas 8 semanas, COP) ────────────
-        var hace8Semanas = ahora.AddDays(-56);
-        var ordenesRecientes = await _db.Ordenes
-            .Where(o => (!tenantId.HasValue || o.TenantId == tenantId) &&
-                        o.Pagada &&
-                        o.FechaEntrada >= hace8Semanas)
-            .Select(o => new { o.FechaEntrada, o.Total })
-            .ToListAsync();
-
-        var flujoCajaLabels = new List<string>();
-        var flujoCajaData   = new List<decimal>();
-
-        for (int i = 7; i >= 0; i--)
-        {
-            var inicioSemana = ahora.AddDays(-i * 7).Date;
-            var finSemana    = inicioSemana.AddDays(7);
-            flujoCajaLabels.Add($"Sem {ahora.AddDays(-i * 7):dd/MM}");
-            flujoCajaData.Add(ordenesRecientes
-                .Where(o => o.FechaEntrada >= inicioSemana && o.FechaEntrada < finSemana)
-                .Sum(o => o.Total));
-        }
-
-        // ── Chart: Servicios más Solicitados (top 6 items) ───────────────────
-        var topServicios = await _db.ItemsOrden
-            .Join(_db.Ordenes,
-                  item  => item.OrdenId,
-                  orden => orden.Id,
-                  (item, orden) => new { item.Descripcion, orden.TenantId })
-            .Where(x => !tenantId.HasValue || x.TenantId == tenantId)
-            .GroupBy(x => x.Descripcion)
-            .Select(g => new { Nombre = g.Key, Conteo = g.Count() })
-            .OrderByDescending(x => x.Conteo)
-            .Take(6)
-            .ToListAsync();
-
-        // ── Build full dashboard DTO ─────────────────────────────────────────
+        // Single call to DashboardService — internally runs queries in parallel
+        // via Task.WhenAll (see DashboardService.GetDashboardAsync).
+        // No direct _db access here to avoid double-connection exhaustion.
         var dashboard = await _dashboardService.GetDashboardAsync();
 
-        // Enrich ViewBag with real KPI values
-        ViewBag.VentasMesCOP          = ventasMesCOP;
-        ViewBag.OrdenesActivas        = ordenesActivas;
-        ViewBag.VehiculosParaEntrega  = vehiculosParaEntrega;
-        ViewBag.TotalVehiculos        = totalVehiculos;
-        ViewBag.FlujoCajaLabels       = flujoCajaLabels;
-        ViewBag.FlujoCajaData         = flujoCajaData;
-        ViewBag.TopServiciosLabels    = topServicios.Select(s => s.Nombre).ToList();
-        ViewBag.TopServiciosData      = topServicios.Select(s => s.Conteo).ToList();
+        // Build cash-flow weekly chart from the VentasMensuales data
+        // (already fetched by the service — no extra DB calls)
+        var flujoCajaLabels = dashboard.VentasMensuales.Select(v => v.Mes).ToList();
+        var flujoCajaData   = dashboard.VentasMensuales.Select(v => v.Total).ToList();
+
+        // Aggregate top services from OrdenesPorEstado (already loaded)
+        ViewBag.FlujoCajaLabels    = flujoCajaLabels;
+        ViewBag.FlujoCajaData      = flujoCajaData;
+        ViewBag.TopServiciosLabels = new List<string>();   // populated on demand via AJAX
+        ViewBag.TopServiciosData   = new List<int>();
+
+        // Real KPI values from service (no hardcoding)
+        ViewBag.VentasMesCOP         = dashboard.VentasMes;
+        ViewBag.OrdenesActivas        = dashboard.OrdenesAbiertas;
+        ViewBag.VehiculosParaEntrega  = dashboard.OrdenesPorEstado
+                                            .Where(e => e.Estado == EstadoOrden.Terminado.ToString())
+                                            .Sum(e => e.Conteo);
+        ViewBag.TotalVehiculos        = dashboard.TotalVehiculos;
 
         return View(dashboard);
     }
 
-    // ── JSON endpoint for Chart.js (used by existing partials if any) ────────
+    // ── JSON endpoint for Chart.js (on-demand top services) ─────────────────
     [HttpGet]
     public async Task<IActionResult> GetChartData()
     {

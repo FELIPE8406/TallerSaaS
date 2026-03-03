@@ -18,7 +18,7 @@ public class ReportesController : Controller
         _tenantService = tenantService;
     }
 
-    [Authorize(Roles = "Admin,Mecanico")]
+    [Authorize(Roles = "Admin,Mecanico,SuperAdmin")]
     public async Task<IActionResult> FacturaPdf(Guid ordenId)
     {
         var tenantNombre = User.FindFirst(TenantClaimTypes.TenantNombre)?.Value ?? "Taller";
@@ -26,7 +26,7 @@ public class ReportesController : Controller
         return File(pdf, "application/pdf", $"Factura-{DateTime.Now:yyyyMMdd}.pdf");
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> ClientesExcel()
     {
         var excel = await _reporteService.ExportarClientesExcelAsync();
@@ -34,7 +34,7 @@ public class ReportesController : Controller
             $"Clientes-{DateTime.Now:yyyyMMdd}.xlsx");
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> VentasExcel(DateTime? desde, DateTime? hasta)
     {
         var excel = await _reporteService.ExportarVentasExcelAsync(desde, hasta);

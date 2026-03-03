@@ -85,4 +85,27 @@ public class InventarioService
     public async Task<List<string>> GetCategoriasAsync() =>
         await _db.Inventario.Where(p => p.Categoria != null)
             .Select(p => p.Categoria!).Distinct().OrderBy(c => c).ToListAsync();
+
+    /// <summary>
+    /// Ejecuta la salida DEFINITIVA de stock de los repuestos consumidos en una orden.
+    /// Llamado exclusivamente desde FacturaService al momento de facturar y bloquear.
+    /// </summary>
+    public async Task DescontarStockPorOrdenAsync(Domain.Entities.Orden orden)
+    {
+        var itemsConProducto = orden.Items
+            .Where(i => i.ProductoInventarioId.HasValue)
+            .ToList();
+
+        foreach (var item in itemsConProducto)
+        {
+            var producto = await _db.Inventario.FindAsync(item.ProductoInventarioId!.Value);
+            if (producto == null) continue;
+
+            var cantidadDescontar = (int)Math.Ceiling(item.Cantidad);
+            producto.Stock = Math.Max(0, producto.Stock - cantidadDescontar);
+            producto.FechaActualizacion = DateTime.UtcNow;
+        }
+        // SaveChanges is called by FacturaService after all orders are processed
+    }
 }
+

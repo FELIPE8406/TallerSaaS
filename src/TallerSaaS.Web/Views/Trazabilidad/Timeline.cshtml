@@ -1,0 +1,117 @@
+@model TallerSaaS.Application.DTOs.TimelineVehiculoDto
+@{
+    ViewData["Title"] = $"Timeline — {Model.VehiculoDescripcion}";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="page-title">🚗 Trazabilidad</h1>
+        <p class="text-muted mb-0">
+            <strong>@Model.VehiculoDescripcion</strong>
+            @if (!string.IsNullOrEmpty(Model.ClienteNombre))
+            {
+                <span class="ms-2">· @Model.ClienteNombre</span>
+            }
+        </p>
+    </div>
+    <a asp-controller="Vehiculos" asp-action="Index" class="btn btn-outline-secondary">
+        ← Volver a Vehículos
+    </a>
+</div>
+
+@if (!Model.Eventos.Any())
+{
+    <div class="card glass-card text-center py-5">
+        <div style="font-size:3rem">📋</div>
+        <p class="mt-2 text-muted">No hay eventos de trazabilidad registrados para este vehículo aún.</p>
+        <p class="text-muted small">Los eventos se registran automáticamente al crear órdenes y generar facturas.</p>
+    </div>
+}
+else
+{
+    <div class="card glass-card p-4">
+        <div class="timeline-container">
+            @foreach (var (evento, index) in Model.Eventos.Select((e, i) => (e, i)))
+            {
+                bool isLast = index == Model.Eventos.Count - 1;
+                <div class="timeline-item @evento.TipoClase">
+                    <div class="timeline-connector @(isLast ? "d-none" : "")"></div>
+                    <div class="timeline-dot">
+                        <span>@evento.TipoIcono</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <p class="timeline-desc mb-1">@evento.Descripcion</p>
+                                <small class="text-muted">
+                                    @evento.FechaEvento.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@section Styles {
+<style>
+.timeline-container {
+    position: relative;
+    padding-left: 0;
+}
+.timeline-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0;
+    position: relative;
+    padding-bottom: 1.5rem;
+    gap: 1rem;
+}
+.timeline-item:last-child { padding-bottom: 0; }
+
+.timeline-connector {
+    position: absolute;
+    left: 19px;
+    top: 38px;
+    width: 2px;
+    bottom: 0;
+    background: linear-gradient(to bottom, #e5e5ea, transparent);
+}
+.timeline-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.timeline-orden .timeline-dot      { background: #f0f7ff; border: 2px solid #0A84FF; }
+.timeline-adicional .timeline-dot  { background: #f0fff4; border: 2px solid #34C759; }
+.timeline-factura .timeline-dot    { background: #fff8f0; border: 2px solid #FF9F0A; }
+.timeline-stock .timeline-dot      { background: #fff0f0; border: 2px solid #FF453A; }
+.timeline-estado .timeline-dot     { background: #f5f0ff; border: 2px solid #6e40f3; }
+.timeline-default .timeline-dot    { background: #f9f9f9; border: 2px solid #ccc; }
+
+.timeline-content {
+    flex: 1;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-top: 4px;
+}
+.timeline-desc {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1c1c1e;
+}
+</style>
+}

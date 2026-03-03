@@ -144,6 +144,38 @@ public class SuperAdminController : Controller
         return View(vm);
     }
 
+    // ── AccesoSoporte — SuperAdmin entra como taller específico ────────────
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> AccesoSoporte(Guid tenantId)
+    {
+        // Extra security guard: must be SuperAdmin
+        if (!User.IsInRole("SuperAdmin")) return Forbid();
+
+        var tenant = await _db.Tenants
+            .Include(t => t.PlanSuscripcion)
+            .FirstOrDefaultAsync(t => t.Id == tenantId);
+
+        if (tenant == null) return NotFound();
+
+        // Write to session — TenantMiddleware reads this before claims on every request
+        HttpContext.Session.SetString("ImpersonatedTenantId",     tenantId.ToString());
+        HttpContext.Session.SetString("ImpersonatedTenantNombre", tenant.Nombre);
+
+        TempData["AccesoSoporte"] = tenant.Nombre;
+        TempData["Exito"] = $"🛡️ Acceso de Soporte activo para: {tenant.Nombre}";
+        return RedirectToAction("Index", "Dashboard");
+    }
+
+    // ── TerminarSoporte — volver al panel SuperAdmin ────────────────────
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult TerminarSoporte()
+    {
+        HttpContext.Session.Remove("ImpersonatedTenantId");
+        HttpContext.Session.Remove("ImpersonatedTenantNombre");
+        TempData["Exito"] = "Sesión de soporte finalizada.";
+        return RedirectToAction(nameof(Tenants));
+    }
+
     // ── Legacy alias — redirect old route to new one ───────────────────────
     public IActionResult CrearTenant() => RedirectToAction(nameof(NuevoTenant));
 

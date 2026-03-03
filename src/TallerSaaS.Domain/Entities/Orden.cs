@@ -20,6 +20,9 @@ public class Orden
     public decimal IVA { get; set; }
     public decimal Total { get; set; }
     public bool Pagada { get; set; } = false;
+    public bool Bloqueada { get; set; } = false;
+    public Guid? FacturaId { get; set; }
+    public Factura? Factura { get; set; }
     public ICollection<ItemOrden> Items { get; set; } = new List<ItemOrden>();
 
     public string EstadoTexto => Estado switch
@@ -28,6 +31,7 @@ public class Orden
         EstadoOrden.EnReparacion => "En Reparación",
         EstadoOrden.Terminado => "Terminado",
         EstadoOrden.Entregado => "Entregado",
+        EstadoOrden.Facturada => "Facturada",
         _ => "Desconocido"
     };
 
@@ -37,6 +41,7 @@ public class Orden
         EstadoOrden.EnReparacion => "badge-reparacion",
         EstadoOrden.Terminado => "badge-terminado",
         EstadoOrden.Entregado => "badge-entregado",
+        EstadoOrden.Facturada => "badge-facturada",
         _ => "bg-secondary"
     };
 }

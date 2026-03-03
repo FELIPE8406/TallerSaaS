@@ -1,0 +1,12 @@
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.deps.json
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.pdb
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\TallerSaaS.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\TallerSaaS.Domain.AssemblyInfoInputs.cache
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\TallerSaaS.Domain.AssemblyInfo.cs
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\TallerSaaS.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\TallerSaaS.Domain.sourcelink.json
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\TallerSaaS.Domain.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\refint\TallerSaaS.Domain.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\TallerSaaS.Domain.pdb
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\obj\Debug\net9.0\ref\TallerSaaS.Domain.dll

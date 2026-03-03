@@ -24,6 +24,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<Orden> Ordenes => Set<Orden>();
     public DbSet<ItemOrden> ItemsOrden => Set<ItemOrden>();
     public DbSet<ProductoInventario> Inventario => Set<ProductoInventario>();
+    public DbSet<Factura> Facturas => Set<Factura>();
+    public DbSet<EventoTrazabilidad> EventosTrazabilidad => Set<EventoTrazabilidad>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -61,7 +63,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasKey(c => c.Id);
             e.Property(c => c.NombreCompleto).HasMaxLength(300).IsRequired();
             e.HasIndex(c => c.TenantId).HasDatabaseName("IX_Clientes_TenantId");
-            e.HasQueryFilter(c => c.TenantId == _tenantService.TenantId);
+            e.HasQueryFilter(c => c.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
         });
 
         // ── Vehiculo ─────────────────────────────────────────────────────────────
@@ -69,7 +71,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         {
             e.HasKey(v => v.Id);
             e.HasIndex(v => v.TenantId).HasDatabaseName("IX_Vehiculos_TenantId");
-            e.HasQueryFilter(v => v.TenantId == _tenantService.TenantId);
+            e.HasQueryFilter(v => v.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
             e.Ignore(v => v.Descripcion);
             e.HasOne(v => v.Cliente).WithMany(c => c.Vehiculos)
              .HasForeignKey(v => v.ClienteId).OnDelete(DeleteBehavior.Restrict);
@@ -84,7 +86,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(o => o.IVA).HasColumnType("decimal(12,2)");
             e.Property(o => o.Total).HasColumnType("decimal(12,2)");
             e.HasIndex(o => o.TenantId).HasDatabaseName("IX_Ordenes_TenantId");
-            e.HasQueryFilter(o => o.TenantId == _tenantService.TenantId);
+            e.HasQueryFilter(o => o.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
             e.Ignore(o => o.EstadoTexto);
             e.Ignore(o => o.EstadoClase);
             e.HasOne(o => o.Vehiculo).WithMany(v => v.Ordenes)
@@ -109,9 +111,39 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(p => p.PrecioCompra).HasColumnType("decimal(12,2)");
             e.Property(p => p.PrecioVenta).HasColumnType("decimal(12,2)");
             e.HasIndex(p => p.TenantId).HasDatabaseName("IX_Inventario_TenantId");
-            e.HasQueryFilter(p => p.TenantId == _tenantService.TenantId);
+            e.HasQueryFilter(p => p.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
             e.Ignore(p => p.NivelStock);
             e.Ignore(p => p.NivelStockClase);
+        });
+
+        // ── Factura ──────────────────────────────────────────────────────────────────────
+        builder.Entity<Factura>(e =>
+        {
+            e.HasKey(f => f.Id);
+            e.Property(f => f.NumeroFactura).HasMaxLength(20).IsRequired();
+            e.Property(f => f.Subtotal).HasColumnType("decimal(12,2)");
+            e.Property(f => f.Descuento).HasColumnType("decimal(12,2)");
+            e.Property(f => f.IVA).HasColumnType("decimal(12,2)");
+            e.Property(f => f.Total).HasColumnType("decimal(12,2)");
+            e.HasIndex(f => f.TenantId).HasDatabaseName("IX_Facturas_TenantId");
+            e.HasQueryFilter(f => f.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            // Ordenes reference their Factura via FacturaId (optional FK on Orden)
+            e.HasMany(f => f.Ordenes).WithOne(o => o.Factura)
+             .HasForeignKey(o => o.FacturaId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ── EventoTrazabilidad ────────────────────────────────────────────────────────
+        builder.Entity<EventoTrazabilidad>(e =>
+        {
+            e.HasKey(ev => ev.Id);
+            e.Property(ev => ev.Descripcion).HasMaxLength(500).IsRequired();
+            e.HasIndex(ev => ev.TenantId).HasDatabaseName("IX_EventosTrazabilidad_TenantId");
+            e.HasIndex(ev => ev.VehiculoId).HasDatabaseName("IX_EventosTrazabilidad_VehiculoId");
+            e.HasQueryFilter(ev => ev.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.Ignore(ev => ev.TipoIcono);
+            e.Ignore(ev => ev.TipoClase);
+            e.HasOne(ev => ev.Vehiculo).WithMany()
+             .HasForeignKey(ev => ev.VehiculoId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Seed subscription plans

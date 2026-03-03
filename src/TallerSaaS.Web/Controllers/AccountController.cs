@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TallerSaaS.Infrastructure.Data;
-using TallerSaaS.Shared.Helpers;
-using System.Security.Claims;
 
 namespace TallerSaaS.Web.Controllers;
 
@@ -14,7 +12,7 @@ public class AccountController : Controller
     public AccountController(SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users)
     {
         _signInManager = signIn;
-        _userManager = users;
+        _userManager   = users;
     }
 
     [HttpGet]
@@ -25,9 +23,9 @@ public class AccountController : Controller
         return View();
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(string email, string password, bool rememberMe = false, string? returnUrl = null)
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Login(string email, string password,
+                                           bool rememberMe = false, string? returnUrl = null)
     {
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null || !user.Activo)
@@ -36,37 +34,33 @@ public class AccountController : Controller
             return View();
         }
 
-        var result = await _signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: true);
+        // TenantClaimsFactory (registered in Program.cs) automatically injects
+        // the TenantId claim from user.TenantId on every successful sign-in.
+        // No manual AddClaimsAsync is required here.
+        var result = await _signInManager.PasswordSignInAsync(user, password, rememberMe,
+                                                              lockoutOnFailure: true);
         if (result.Succeeded)
         {
-            // Add tenant claim to the session
-            if (user.TenantId.HasValue)
-            {
-                var claims = new List<Claim>
-                {
-                    new(TenantClaimTypes.TenantId, user.TenantId.Value.ToString())
-                };
-                await _userManager.AddClaimsAsync(user, claims.Where(c =>
-                    !_userManager.GetClaimsAsync(user).Result.Any(x => x.Type == c.Type)));
-            }
-
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
 
-            if (user.EsSuperAdmin)
-                return RedirectToAction("Index", "SuperAdmin");
-
-            return RedirectToAction("Index", "Dashboard");
+            return user.EsSuperAdmin
+                ? RedirectToAction("Index", "SuperAdmin")
+                : RedirectToAction("Index", "Dashboard");
         }
 
-        TempData["Error"] = result.IsLockedOut ? "Cuenta bloqueada temporalmente." : "Credenciales incorrectas.";
+        TempData["Error"] = result.IsLockedOut
+            ? "Cuenta bloqueada temporalmente."
+            : "Credenciales incorrectas.";
         return View();
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        // Also clear impersonation session on logout
+        HttpContext.Session.Remove("ImpersonatedTenantId");
+        HttpContext.Session.Remove("ImpersonatedTenantNombre");
         await _signInManager.SignOutAsync();
         return RedirectToAction("Login");
     }
