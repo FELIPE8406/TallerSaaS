@@ -1,0 +1,66 @@
+@{
+    ViewData["Title"] = "Registrar Personal";
+}
+
+<div class="d-flex justify-content-center py-5">
+    <div class="card-create-user">
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-dark p-4 text-center">
+                <h3 class="text-white mb-1 fw-bold">Registrar Personal</h3>
+                <p class="text-white-50 small mb-0">Crea una nueva cuenta para tu equipo</p>
+            </div>
+            <div class="card-body p-4 p-md-5">
+                <form asp-action="Crear" method="post">
+                    <div class="mb-4">
+                        <label class="form-label text-uppercase small fw-bold text-muted">Nombre Completo</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-person text-secondary"></i></span>
+                            <input type="text" name="nombre" class="form-control form-control-lg bg-light border-0" placeholder="Ej: Juan Pérez" required />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-uppercase small fw-bold text-muted">Correo Electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-envelope text-secondary"></i></span>
+                            <input type="email" name="email" class="form-control form-control-lg bg-light border-0" placeholder="juan.perez@taller.com" required />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-uppercase small fw-bold text-muted">Contraseña Temporal</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-shield-lock text-secondary"></i></span>
+                            <input type="password" name="password" class="form-control form-control-lg bg-light border-0" required minlength="8" />
+                        </div>
+                        <div class="form-text small">La contraseña debe tener al menos 8 caracteres.</div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="form-label text-uppercase small fw-bold text-muted">Rol Asignado</label>
+                        <select name="role" class="form-select form-select-lg bg-light border-0" required>
+                            <option value="Mecanico">Mecánico (Aparece en Agenda)</option>
+                            <option value="Admin">Administrador (Gestión)</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-3">
+                        <button type="submit" class="btn btn-primary btn-lg py-3 fw-bold shadow-sm">
+                            <i class="bi bi-person-check me-2"></i>Crear Usuario
+                        </button>
+                        <a asp-action="Index" class="btn btn-link text-muted text-decoration-none">
+                            <i class="bi bi-arrow-left me-1"></i>Volver al listado
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-create-user { width: 100%; max-width: 500px; }
+    .form-control-lg, .form-select-lg { font-size: 1rem; padding: 0.8rem 1.2rem; }
+    .input-group-text { padding-right: 0.5rem; }
+    .card-header { background: #1D1D1F !important; }
+</style>

@@ -1,0 +1,158 @@
+﻿@model TallerSaaS.Web.Models.TransaccionesViewModel
+@{
+    ViewData["Title"] = "Pagos Globales";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">Recaudación Global</h1>
+            <p class="text-muted">Monitoreo de suscripciones y facturación del SaaS.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="ExportarPagosCSV" class="btn btn-outline-secondary px-3 shadow-sm" style="border-radius: 10px;">
+                <i class="bi bi-download me-2"></i>Reporte Mensual
+            </a>
+            <button class="btn btn-primary px-4 shadow-sm" style="border-radius: 10px;" data-bs-toggle="modal" data-bs-target="#modalManualPago">
+                <i class="bi bi-plus-lg me-2"></i>Registrar Pago Manual
+            </button>
+        </div>
+    </div>
+
+    <!-- ── KPI Row ───────────────────────────────────────────────────────── -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3" style="border-radius: 16px; border-left: 5px solid #007AFF !important;">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-semibold small">Recaudo Mes (COP)</h6>
+                    <h3 class="fw-bold mb-0">$@Model.RecaudoMes.ToString("N0")</h3>
+                    @{
+                        var dif = Model.RecaudoMes - Model.IngresosMesAnterior;
+                        var pct = Model.IngresosMesAnterior > 0 ? (dif / Model.IngresosMesAnterior) * 100 : 0;
+                    }
+                    <span class="text-@(pct >= 0 ? "success" : "danger") small fw-medium">
+                        <i class="bi bi-graph-@(pct >= 0 ? "up" : "down")-arrow me-1"></i>
+                        @(pct >= 0 ? "+" : "")@pct.ToString("F1")% vs mes anterior
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3" style="border-radius: 16px; border-left: 5px solid #FF9500 !important;">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-semibold small">Pagos Pendientes</h6>
+                    <h3 class="fw-bold mb-0">$@Model.PagosPendientes.ToString("N0")</h3>
+                    <span class="text-warning small fw-medium"><i class="bi bi-clock me-1"></i>Requieren seguimiento</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3" style="border-radius: 16px; border-left: 5px solid #34C759 !important;">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-semibold small">Tasa de Renovación</h6>
+                    <h3 class="fw-bold mb-0">@(Model.TasaRenovacion * 100)%</h3>
+                    <span class="text-success small fw-medium"><i class="bi bi-people me-1"></i>Clientes fidelizados</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Transaction Table ─────────────────────────────────────────────── -->
+    <div class="card border-0 shadow-sm" style="border-radius: 20px; overflow: hidden; border: 1px solid #D2D2D7 !important;">
+        <div class="card-header bg-white border-0 p-4">
+            <h5 class="fw-bold text-dark m-0">Historial de Transacciones</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 border-0">Taller / Cliente</th>
+                        <th class="border-0">Plan</th>
+                        <th class="border-0">Fecha</th>
+                        <th class="border-0">Monto (COP)</th>
+                        <th class="border-0 text-center">Estado</th>
+                        <th class="pe-4 border-0 text-end">Referencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pago in Model.Transacciones)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">@(pago.Tenant?.Nombre ?? "N/A")</div>
+                                <small class="text-muted">NIT: @(pago.Tenant?.RFC ?? "N/A")</small>
+                            </td>
+                            <td>
+                                <span class="badge @(pago.PlanSuscripcion?.Nombre?.Contains("Enterprise") == true ? "bg-dark" : "bg-primary-subtle text-primary")">
+                                    @(pago.PlanSuscripcion?.Nombre ?? "Suscripción")
+                                </span>
+                            </td>
+                            <td>@pago.Fecha.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</td>
+                            <td class="fw-semibold">$@pago.Monto.ToString("N0")</td>
+                            <td class="text-center">
+                                <span class="badge @(pago.Estado == "Completado" ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning") px-3">
+                                    @pago.Estado
+                                </span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <small class="text-muted font-monospace">@pago.Referencia</small>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Transacciones.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">No se han registrado transacciones aún.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pago Manual -->
+<div class="modal fade" id="modalManualPago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 p-4">
+                <h5 class="modal-title fw-bold">Registrar Pago Manual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="RegistrarPagoManual" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4 pt-0">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Taller / Sede</label>
+                        <select name="TenantId" class="form-select" required style="border-radius:10px;">
+                            <option value="">Seleccione un taller...</option>
+                            @foreach (var t in Model.Talleres)
+                            {
+                                <option value="@t.Id">@t.Nombre (NIT: @t.RFC)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Monto (COP)</label>
+                            <input type="number" name="Monto" class="form-control" style="border-radius:10px;" placeholder="Ej: 89900">
+                            <div class="form-text" style="font-size:10px;">Deje en 0 para usar valor del plan.</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Fecha</label>
+                            <input type="datetime-local" name="Fecha" class="form-control" style="border-radius:10px;" value="@(DateTime.Now.ToString("yyyy-MM-ddTHH:mm"))" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Concepto / Referencia Interna</label>
+                        <input type="text" name="Concepto" class="form-control" style="border-radius:10px;" placeholder="Ej: Pago transferencia Bancolombia">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4">
+                    <button type="button" class="btn btn-link text-decoration-none text-muted" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold" style="border-radius:12px;">Registrar Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

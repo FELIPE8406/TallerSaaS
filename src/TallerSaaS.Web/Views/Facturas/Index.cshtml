@@ -1,0 +1,132 @@
+@model List<TallerSaaS.Application.DTOs.FacturaDto>
+@{
+    ViewData["Title"] = "Facturas";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">🧾 Facturas</h1>
+        <p class="text-muted">Historial de facturación del taller</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Nueva" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                <path d="M12 5v14M5 12h14"/>
+            </svg> Nueva Factura
+        </a>
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                    data-bs-toggle="dropdown">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                    <polyline points="16 6 12 2 8 6"/>
+                    <line x1="12" y1="2" x2="12" y2="15"/>
+                </svg> Exportar
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" asp-action="DescargarExcel">
+                    📊 Exportar Excel Pro
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">@Html.Raw(TempData["Exito"])
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">@Html.Raw(TempData["Error"])
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Info"] != null)
+{
+    <div class="alert alert-info alert-dismissible fade show">@Html.Raw(TempData["Info"])
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card glass-card">
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <div style="font-size:3rem">🧾</div>
+                <p class="mt-2">No hay facturas generadas aún.</p>
+                <a asp-action="Nueva" class="btn btn-primary btn-sm">Crear primera factura</a>
+            </div>
+        }
+        else
+        {
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>No. Factura</th>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Órdenes</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var f in Model)
+                    {
+                        <tr>
+                            <td>
+                                <span class="fw-bold text-primary">@f.NumeroFactura</span>
+                            </td>
+                            <td><small class="text-muted">@f.FechaEmision.ToString("dd/MM/yyyy HH:mm")</small></td>
+                            <td>
+                                @if (f.TipoFacturacion == "Electronica")
+                                {
+                                    <span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #e65100;font-size:11px;">
+                                        🔶 DIAN
+                                    </span>
+                                    @if (f.EstadoEnvio == "PendienteEnvio")
+                                    {
+                                        <span class="badge bg-warning text-dark ms-1" style="font-size:10px;">Pendiente</span>
+                                    }
+                                    else if (f.EstadoEnvio == "Enviada")
+                                    {
+                                        <span class="badge bg-success ms-1" style="font-size:10px;">Enviada</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge" style="background:#e8f5e9;color:#1b5e20;border:1px solid #388e3c;font-size:11px;">
+                                        ✅ Interna
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                @foreach (var o in f.Ordenes)
+                                {
+                                    <span class="badge bg-secondary me-1">@o.NumeroOrden</span>
+                                }
+                            </td>
+                            <td class="text-end fw-bold">
+                                $@f.Total.ToString("N0")
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Detalle" asp-route-id="@f.Id"
+                                   class="btn btn-sm btn-outline-primary me-1">Ver</a>
+                                <a asp-action="DescargarPdf" asp-route-id="@f.Id"
+                                   class="btn btn-sm btn-outline-danger" target="_blank">
+                                    📄 PDF
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

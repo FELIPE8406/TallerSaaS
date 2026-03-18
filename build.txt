@@ -1,0 +1,17 @@
+  Determinando los proyectos que se van a restaurar...
+  Todos los proyectos están actualizados para la restauración.
+  TallerSaaS.Domain -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.dll
+  TallerSaaS.Shared -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Shared\bin\Debug\net9.0\TallerSaaS.Shared.dll
+  TallerSaaS.Application -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\bin\Debug\net9.0\TallerSaaS.Application.dll
+  TallerSaaS.Infrastructure -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Infrastructure\bin\Debug\net9.0\TallerSaaS.Infrastructure.dll
+C:\Program Files\dotnet\sdk\9.0.311\Microsoft.Common.CurrentVersion.targets(5394,5): warning MSB3026: No se pudo copiar "C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\apphost.exe" en "bin\Debug\net9.0\TallerSaaS.Web.exe". Se iniciará el reintento 1 dentro de 1000ms. The process cannot access the file 'C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\bin\Debug\net9.0\TallerSaaS.Web.exe' because it is being used by another process. El archivo se ha bloqueado por: "TallerSaaS.Web (6072)" [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+
+ERROR al compilar.
+
+C:\Program Files\dotnet\sdk\9.0.311\Microsoft.Common.CurrentVersion.targets(5394,5): warning MSB3026: No se pudo copiar "C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\apphost.exe" en "bin\Debug\net9.0\TallerSaaS.Web.exe". Se iniciará el reintento 1 dentro de 1000ms. The process cannot access the file 'C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\bin\Debug\net9.0\TallerSaaS.Web.exe' because it is being used by another process. El archivo se ha bloqueado por: "TallerSaaS.Web (6072)" [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+    1 Advertencia(s)
+    0 Errores
+
+Tiempo transcurrido 00:00:03.14
+
+Hay actualizaciones de carga de trabajo disponibles. Ejecute "dotnet workload list" para obtener más información.

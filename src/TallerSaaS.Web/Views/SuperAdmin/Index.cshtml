@@ -1,0 +1,311 @@
+@using TallerSaaS.Application.DTOs
+@model SuperAdminDashboardDto
+@{
+    ViewData["Title"] = "Panel Global SuperAdmin";
+    var pctActivos = Model.TotalTenants > 0
+        ? (int)Math.Round(Model.TenantsActivos * 100.0 / Model.TotalTenants)
+        : 0;
+}
+
+<!-- ═══ Page Header ═══════════════════════════════════════════════════════ -->
+<div class="sa-page-header">
+    <div>
+        <div class="sa-eyebrow">
+            <i class="bi bi-shield-fill-check"></i> SuperAdmin · Consola Global
+        </div>
+        <h1 class="sa-title">Panel de Control</h1>
+        <p class="sa-subtitle">
+            Visión ejecutiva · @DateTime.UtcNow.ToString("dddd d 'de' MMMM, yyyy", new System.Globalization.CultureInfo("es-CO"))
+        </p>
+    </div>
+    <div class="sa-header-actions">
+        <a asp-action="Tenants" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-buildings me-1"></i>Ver Todos
+        </a>
+        <a asp-action="NuevoTenant" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Nuevo Taller
+        </a>
+    </div>
+</div>
+
+<!-- ═══ KPI Grid — 4 Glass Cards ════════════════════════════════════════ -->
+<div class="sa-kpi-grid">
+
+    <!-- Recaudo Mes -->
+    <a asp-action="Pagos" class="sa-kpi text-decoration-none">
+        <div class="sa-kpi-icon" style="--c:rgba(52,199,89,.1);--ic:#34C759;">
+            <i class="bi bi-graph-up-arrow"></i>
+        </div>
+        <div class="sa-kpi-body">
+            <div class="sa-kpi-value">$@Model.IngresosMes.ToString("N0")</div>
+            <div class="sa-kpi-label">Recaudo Mes</div>
+            <div class="sa-kpi-sub">
+                @if (Model.IngresosMes >= Model.IngresosMesAnterior)
+                {
+                    <span class="text-success"><i class="bi bi-arrow-up-short"></i> Crecimiento</span>
+                }
+                else
+                {
+                    <span class="text-danger"><i class="bi bi-arrow-down-short"></i> Disminución</span>
+                }
+            </div>
+        </div>
+        <i class="bi bi-chevron-right sa-kpi-arrow"></i>
+    </a>
+
+    <!-- Pagos Pendientes -->
+    <a asp-action="Pagos" class="sa-kpi text-decoration-none">
+        <div class="sa-kpi-icon" style="--c:rgba(255,149,0,.1);--ic:#FF9500;">
+            <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="sa-kpi-body">
+            <div class="sa-kpi-value">$@Model.PagosPendientes.ToString("N0")</div>
+            <div class="sa-kpi-label">Pagos Pendientes</div>
+            <div class="sa-kpi-sub">Por recaudar</div>
+        </div>
+        <i class="bi bi-chevron-right sa-kpi-arrow"></i>
+    </a>
+
+    <!-- Tasa de Renovación -->
+    <div class="sa-kpi">
+        <div class="sa-kpi-icon" style="--c:rgba(0,122,255,.1);--ic:#007AFF;">
+            <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <div class="sa-kpi-body">
+            <div class="sa-kpi-value">@((Model.TasaRenovacion * 100).ToString("N1"))%</div>
+            <div class="sa-kpi-label">Tasa de Renovación</div>
+            <div class="sa-kpi-sub">Últimos 30 días</div>
+        </div>
+    </div>
+
+    <!-- Talleres Activos -->
+    <a asp-action="Tenants" class="sa-kpi text-decoration-none">
+        <div class="sa-kpi-icon" style="--c:rgba(108,108,255,.1);--ic:#6C6CFF;">
+            <i class="bi bi-buildings"></i>
+        </div>
+        <div class="sa-kpi-body">
+            <div class="sa-kpi-value">@Model.TenantsActivos</div>
+            <div class="sa-kpi-label">Talleres Activos</div>
+            <div class="sa-kpi-sub">@pctActivos% del histórico</div>
+        </div>
+        <i class="bi bi-chevron-right sa-kpi-arrow"></i>
+    </a>
+
+</div>
+
+<!-- ═══ Ocupación + Últimos Talleres ════════════════════════════════════ -->
+<div class="sa-bottom-grid">
+
+    <!-- Actividad de suscripción (mini gauge) -->
+    <div class="sa-card">
+        <div class="sa-card-header">
+            <div class="sa-card-title">Distribución de Estados</div>
+        </div>
+        <div class="sa-card-body" style="display:flex;flex-direction:column;gap:18px;">
+
+            <div>
+                <div class="sa-metric-row">
+                    <span class="sa-metric-label">Activos</span>
+                    <span class="sa-metric-value" style="color:#34C759;">@pctActivos%</span>
+                </div>
+                <div class="sa-bar-track">
+                    <div class="sa-bar-fill" style="width:@pctActivos%;background:#34C759;"></div>
+                </div>
+            </div>
+
+            @{
+                var pctInactivos = 100 - pctActivos;
+            }
+            <div>
+                <div class="sa-metric-row">
+                    <span class="sa-metric-label">Inactivos / Suspendidos</span>
+                    <span class="sa-metric-value" style="color:#FF3B30;">@pctInactivos%</span>
+                </div>
+                <div class="sa-bar-track">
+                    <div class="sa-bar-fill" style="width:@pctInactivos%;background:#FF3B30;"></div>
+                </div>
+            </div>
+
+            <hr style="margin:4px 0;border-color:#3A3A3C;" />
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <a asp-action="NuevoTenant" class="sa-quick-link">
+                    <i class="bi bi-building-add"></i>
+                    <span>Registrar Nuevo Taller</span>
+                    <i class="bi bi-chevron-right ms-auto" style="font-size:12px;color:#AEAEB2;"></i>
+                </a>
+                <a asp-action="Planes" class="sa-quick-link">
+                    <i class="bi bi-card-list"></i>
+                    <span>Gestionar Planes</span>
+                    <i class="bi bi-chevron-right ms-auto" style="font-size:12px;color:#AEAEB2;"></i>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Últimos talleres creados -->
+    <div class="sa-card" style="flex:1;min-width:0;">
+        <div class="sa-card-header">
+            <div class="sa-card-title">Talleres Recientes</div>
+            <a asp-action="Tenants" class="sa-card-link">Ver todos →</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table-sa-custom">
+                <thead>
+                    <tr>
+                        <th>Taller</th>
+                        <th>Plan</th>
+                        <th class="d-none d-lg-table-cell">Recaudo</th>
+                        <th class="d-none d-md-table-cell">Alta</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Tenants.Take(5))
+                    {
+                        <tr class="sa-table-row">
+                            <td>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <div class="sa-tenant-avatar">
+                                        @t.Nombre.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <div>
+                                        <div class="sa-tenant-name">@t.Nombre</div>
+                                        <div class="sa-tenant-email">@t.Email</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(t.PlanNombre))
+                                {
+                                    <span class="sa-badge-plan">@t.PlanNombre</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Sin plan</span>
+                                }
+                            </td>
+                            <td class="d-none d-lg-table-cell text-muted">$@t.PrecioPlan.ToString("N0")</td>
+                            <td class="d-none d-md-table-cell text-muted">@t.FechaAlta.ToString("dd MMM")</td>
+                            <td>
+                                <span class="sa-status-pill @(t.Activo ? "active" : "inactive")">
+                                    @(t.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td class="text-end pe-3">
+                                <a asp-action="Tenants" class="btn btn-sm btn-dark" style="border-radius:8px;font-size:11px;">Gestionar</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ═══ Scoped Styles ══════════════════════════════════════════════════ -->
+<style>
+/* Base Dark Theme Overrides for SuperAdmin */
+:root {
+    --sa-bg: #121212;
+    --sa-card-bg: #1C1C1E;
+    --sa-border: #3A3A3C;
+    --sa-text: #FFFFFF;
+    --sa-text-muted: #8E8E93;
+    --sa-primary: #007AFF;
+}
+
+body { background-color: var(--sa-bg); color: var(--sa-text); }
+
+/* Header */
+.sa-page-header {
+    display:flex;align-items:flex-start;justify-content:space-between;
+    margin-bottom:28px;flex-wrap:wrap;gap:12px;
+}
+.sa-eyebrow {
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+    color:#0A84FF;background:rgba(10,132,255,0.15);padding:4px 10px;border-radius:20px;margin-bottom:6px;
+}
+.sa-title   { font-size:24px;font-weight:800;letter-spacing:-.04em;color:var(--sa-text);margin:0; }
+.sa-subtitle{ font-size:14px;color:var(--sa-text-muted);margin:4px 0 0; }
+.sa-header-actions{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* KPI Grid */
+.sa-kpi-grid {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:16px;
+    margin-bottom:24px;
+}
+@@media(max-width:1100px){.sa-kpi-grid{grid-template-columns:repeat(2,1fr);}}
+@@media(max-width:600px) {.sa-kpi-grid{grid-template-columns:1fr;}}
+
+.sa-kpi {
+    background:var(--sa-card-bg);border:1px solid var(--sa-border);border-radius:18px;
+    padding:20px;display:flex;align-items:center;gap:16px;
+    transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:0 4px 12px rgba(0,0,0,.2);color:var(--sa-text);
+}
+.sa-kpi:hover{transform:translateY(-5px);box-shadow:0 12px 30px rgba(0,0,0,.4);border-color:#5E5E62;}
+
+.sa-kpi-icon {
+    width:52px;height:52px;border-radius:14px;flex-shrink:0;
+    background:var(--c);color:var(--ic);
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.sa-kpi-body{flex:1;min-width:0;}
+.sa-kpi-value{font-size:26px;font-weight:800;letter-spacing:-.035em;line-height:1;margin-bottom:4px;}
+.sa-kpi-label{font-size:13px;font-weight:600;color:var(--sa-text-muted);}
+.sa-kpi-sub  {font-size:11px;margin-top:4px;}
+.sa-kpi-arrow{color:#48484A;font-size:14px;transition:transform .3s;}
+.sa-kpi:hover .sa-kpi-arrow{transform:translateX(4px);color:var(--sa-primary);}
+
+/* Bottom grid */
+.sa-bottom-grid{display:grid;grid-template-columns:320px 1fr;gap:20px;}
+@@media(max-width:940px){.sa-bottom-grid{grid-template-columns:1fr;}}
+
+/* Cards */
+.sa-card{background:var(--sa-card-bg);border:1px solid var(--sa-border);border-radius:20px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.2);}
+.sa-card-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--sa-border);}
+.sa-card-title{font-size:16px;font-weight:700;color:var(--sa-text);letter-spacing:-.02em;}
+.sa-card-link{font-size:13px;color:var(--sa-primary);text-decoration:none;font-weight:500;}
+.sa-card-link:hover{text-decoration:underline;}
+.sa-card-body{padding:20px 24px 28px;}
+
+/* Metric bars */
+.sa-metric-row{display:flex;justify-content:space-between;margin-bottom:10px;}
+.sa-metric-label{font-size:14px;color:var(--sa-text-muted);}
+.sa-metric-value{font-size:14px;font-weight:700;}
+.sa-bar-track{height:6px;border-radius:3px;background:#2C2C2E;overflow:hidden;}
+.sa-bar-fill {height:100%;border-radius:3px;transition:width .8s cubic-bezier(0.16, 1, 0.3, 1);}
+
+/* Table Custom */
+.table-sa-custom { width:100%; border-collapse:separate; border-spacing:0; }
+.table-sa-custom th { padding:14px 24px; font-size:12px; font-weight:700; color:var(--sa-text-muted); text-transform:uppercase; border-bottom:1px solid var(--sa-border); }
+.table-sa-custom td { padding:16px 24px; vertical-align:middle; border-bottom:1px solid rgba(255,255,255,.05); transition:background .2s; }
+.sa-table-row:hover td { background:rgba(255,255,255,.03); }
+
+.sa-tenant-avatar { width:38px; height:38px; border-radius:10px; background:rgba(0,122,255,.1); color:var(--sa-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+.sa-tenant-name { font-weight:600; color:var(--sa-text); font-size:14px; }
+.sa-tenant-email { font-size:12px; color:var(--sa-text-muted); }
+
+.sa-badge-plan { background:rgba(255,255,255,.1); color:var(--sa-text); padding:4px 10px; border-radius:8px; font-size:11px; font-weight:700; border:1px solid rgba(255,255,255,.1); }
+
+.sa-status-pill { padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; display:inline-block; }
+.sa-status-pill.active   { background:rgba(48,209,88,.15); color:#30D158; }
+.sa-status-pill.inactive { background:rgba(255,69,58,.15); color:#FF453A; }
+
+/* Quick links */
+.sa-quick-link {
+    display:flex;align-items:center;gap:12px;
+    padding:12px 14px;border-radius:12px;border:1px solid var(--sa-border);
+    background:#2C2C2E;text-decoration:none;color:var(--sa-text);
+    font-size:14px;font-weight:500;transition:all .2s;
+}
+.sa-quick-link:hover{background:#3A3A3C;border-color:#5E5E62;color:var(--sa-primary);transform:translateX(5px);}
+.sa-quick-link i:first-child{color:var(--sa-text-muted);font-size:16px;width:20px;text-align:center;}
+</style>

@@ -1,0 +1,588 @@
+@using TallerSaaS.Application.DTOs
+@model OrdenDto
+@{ ViewData["Title"] = $"Orden {Model.NumeroOrden}"; }
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-file-earmark-text me-2" style="color:var(--primary);"></i>@Model.NumeroOrden</h1>
+    <p class="page-subtitle">
+      @Model.ClienteNombre – @Model.VehiculoDescripcion
+      <span class="estado-badge @Model.EstadoClase ms-2">@Model.EstadoTexto</span>
+      @if (Model.Bloqueada)
+      {
+        <span class="badge bg-purple ms-1">🔒 Facturada</span>
+      }
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a asp-controller="Reportes" asp-action="FacturaPdf" asp-route-ordenId="@Model.Id"
+       class="btn btn-outline-secondary"><i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF</a>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- State workflow -->
+  <div class="col-12">
+    <div class="card-custom p-4">
+      <h6 style="font-weight:700;margin-bottom:16px;">Flujo de Trabajo</h6>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        @{
+          var estados = new[] { (1, "Recibido", "inbox"), (2, "En Reparacion", "wrench"), (3, "Terminado", "check-circle"), (4, "Entregado", "check2-all") };
+          int estadoActual = Model.Estado;
+        }
+        @foreach (var (num, label, icon) in estados)
+        {
+          bool esActual    = num == estadoActual;
+          bool esCompletado = num < estadoActual;
+          <div style="text-align:center;">
+            <div style="width:48px;height:48px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:20px;
+                        background: @(esCompletado ? "#e8f5e9" : esActual ? "#e3f2fd" : "var(--surface2)");
+                        color: @(esCompletado ? "#2e7d32" : esActual ? "#1a73e8" : "var(--text-muted)");
+                        border: 2px solid @(esActual ? "#1a73e8" : "transparent");">
+              <i class="bi bi-@icon"></i>
+            </div>
+            <div style="font-size:12px;font-weight: @(esActual ? "700" : "500");color: @(esActual ? "var(--primary)" : "var(--text-muted)");"> @label</div>
+          </div>
+          @if (num < 4) { <div style="flex:1;height:2px;background: @(num < estadoActual ? "#2e7d32" : "var(--border)");min-width:20px;"></div> }
+        }
+      </div>
+
+      @{
+        bool requiereFactura = TempData["RequiereFactura"] != null && (bool)TempData["RequiereFactura"]!;
+      }
+      @if (!Model.Bloqueada && estadoActual < 4)
+      {
+        string nextLabel = estados[estadoActual].Item2;
+        <div class="mt-3">
+          @if (estadoActual == 3 && !Model.Pagada)
+          {
+            @* Estado: Terminado pero sin factura/pago → bloquear avance *@
+            <div class="alert mb-3 d-flex align-items-start gap-3"
+                 style="background:linear-gradient(135deg,#fff3cd,#ffe28a);border:1.5px solid #ffc107;border-radius:12px;padding:16px;">
+              <i class="bi bi-lock-fill" style="font-size:22px;color:#b45309;margin-top:2px;"></i>
+              <div>
+                <strong style="color:#92400e;font-size:14px;">Entrega bloqueada — Se requiere factura pagada</strong>
+                <p class="mb-0 mt-1" style="font-size:13px;color:#78350f;">
+                  Para marcar esta orden como <em>Entregada</em>, primero debe generarse y pagarse una factura.
+                  La facturación electrónica (DIAN) cierra el saldo automáticamente una vez procesada.
+                </p>
+              </div>
+            </div>
+            <a asp-controller="Facturas" asp-action="Nueva"
+               class="btn btn-warning fw-semibold">
+              <i class="bi bi-receipt me-1"></i>Ir a Facturar esta Orden
+            </a>
+          }
+          else
+          {
+            <form asp-action="CambiarEstado" method="post" style="display:inline;">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="id"     value="@Model.Id" />
+              <input type="hidden" name="estado" value="@(estadoActual + 1)" />
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-arrow-right-circle me-1"></i>Avanzar a "@nextLabel"
+              </button>
+            </form>
+          }
+        </div>
+      }
+
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="col-12 col-lg-8">
+    <div class="card-custom p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 style="font-weight:700;margin:0;">Servicios y Refacciones</h6>
+        <span id="guardadoMsg" class="text-success small fw-semibold" style="display:none;">
+          <i class="bi bi-check-circle me-1"></i>Guardado
+        </span>
+      </div>
+
+      <!-- Live-refresh table (id for AJAX targeting) -->
+      <table class="table-custom mb-3" id="itemsTable">
+        <thead>
+          <tr><th>Descripción</th><th>Tipo</th><th>Cant.</th><th>Precio</th><th>Subtotal</th><th></th></tr>
+        </thead>
+        <tbody id="itemsTbody">
+          @foreach (var item in Model.Items)
+          {
+            <tr data-id="@item.Id">
+              <td>@item.Descripcion</td>
+              <td><span class="badge @(item.Tipo == "Servicio" ? "bg-primary" : "bg-info text-dark")">@item.Tipo</span></td>
+              <td>@item.Cantidad</td>
+              <td>$@item.PrecioUnitario.ToString("N2")</td>
+              <td><strong>$@item.Subtotal.ToString("N2")</strong></td>
+              <td>
+                @if (!Model.Bloqueada)
+                {
+                  <form asp-action="EliminarItem" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="ordenId" value="@Model.Id" />
+                    <input type="hidden" name="itemId"  value="@item.Id" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (!Model.Bloqueada)
+      {
+        <!-- AJAX add-item form — inventory typeahead, no full page reload -->
+        <form id="formAgregarItem"
+              class="p-3 rounded-3"
+              style="background:var(--surface2);border:1px solid var(--border);">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="ordenId"             value="@Model.Id" />
+          <!-- Hidden fields sent to the server -->
+          <input type="hidden" name="descripcion"         id="inp-desc" />
+          <input type="hidden" name="productoInventarioId" id="inp-prodId" />
+          <input type="hidden" name="tipo"                id="inp-tipo-hidden" value="Servicio" />
+
+          <div class="row g-2 align-items-start">
+
+            <!-- ① Typeahead: visible search box -->
+            <div class="col-12 col-md-4" style="position:relative;">
+              <input type="text" id="inp-busqueda" class="form-control"
+                     placeholder="Buscar artículo o servicio…" autocomplete="off" />
+              <!-- Dropdown results -->
+              <ul id="lista-productos"
+                  class="list-group shadow"
+                  style="display:none;position:absolute;z-index:1000;width:100%;max-height:220px;overflow-y:auto;
+                         background:var(--surface2);border:1px solid var(--border);border-radius:8px;top:100%;left:0;"></ul>
+            </div>
+
+            <!-- ② Tipo (auto-filled, read-only visually; editable only for pure-service mode) -->
+            <div class="col-6 col-md-2">
+              <select id="inp-tipo-select" class="form-select">
+                <option value="Servicio">Servicio</option>
+                <option value="Refaccion">Refacción</option>
+              </select>
+            </div>
+
+            <!-- ③ Cantidad (locked to 1 for services) -->
+            <div class="col-6 col-md-2">
+              <div style="position:relative;">
+                <input type="number" name="cantidad" id="inp-cant" class="form-control"
+                       value="1" min="0.25" step="0.25" required />
+                <span id="badge-stock" class="badge bg-info text-dark"
+                      style="display:none;position:absolute;top:-10px;right:4px;font-size:10px;"></span>
+              </div>
+            </div>
+
+            <!-- ④ Precio (readonly for refacciones, editable for servicios) -->
+            <div class="col-6 col-md-2">
+              <input type="number" name="precioUnitario" id="inp-precio" class="form-control"
+                     placeholder="Precio COP" min="0" step="100" required />
+            </div>
+
+            <!-- ⑤ Submit -->
+            <div class="col-6 col-md-2">
+              <button type="submit" id="btnAgregar" class="btn btn-primary w-100">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hint row -->
+          <div class="row mt-1">
+            <div class="col-12 col-md-4">
+              <small id="hint-busqueda" class="text-muted" style="font-size:11px;">
+                <i class="bi bi-search me-1"></i>Escribe 2+ letras para buscar en inventario
+              </small>
+            </div>
+          </div>
+
+          <div id="errorItem" class="text-danger small mt-2" style="display:none;"></div>
+        </form>
+      }
+    </div>
+  </div>
+
+  <!-- Totals (live-refresh target) -->
+  <div class="col-12 col-lg-4">
+    <div class="card-custom p-4" id="resumenCostos">
+      <h6 style="font-weight:700;margin-bottom:16px;">Resumen de Costos</h6>
+      <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-muted);">Subtotal</span>
+        <strong id="valSubtotal">$@Model.Subtotal.ToString("N2")</strong>
+      </div>
+      <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-muted);">Descuento</span>
+        <strong id="valDescuento">-$@Model.Descuento.ToString("N2")</strong>
+      </div>
+      <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-muted);">IVA (19% — Colombia)</span>
+        <strong id="valIva">$@Model.IVA.ToString("N2")</strong>
+      </div>
+
+      <!-- Retención en la Fuente -->
+      <div class="mt-3 p-3 rounded-3" style="background:var(--surface2);border:1px solid var(--border);">
+          <div class="form-check form-switch d-flex justify-content-between align-items-center p-0">
+              <label class="form-check-label fw-bold" for="toggleRetencion" style="font-size:13px;cursor:pointer;">
+                  <i class="bi bi-briefcase me-1"></i>Aplicar Retención (Cliente Empresa)
+              </label>
+              <input class="form-check-input ms-0" type="checkbox" id="toggleRetencion" 
+                     @(Model.AplicarRetencion ? "checked" : "") @(Model.Bloqueada ? "disabled" : "") />
+          </div>
+          
+          <div id="sectionRetencionDetalle" class="mt-2" style="display: @(Model.AplicarRetencion ? "block" : "none");">
+              <select id="selectPorcentajeRet" class="form-select form-select-sm mb-2" style="font-size:12px;" @(Model.Bloqueada ? "disabled" : "")>
+                  <option value="4" selected="@(Model.PorcentajeRetencion == 4)">4% - Servicios</option>
+                  <option value="6" selected="@(Model.PorcentajeRetencion == 6)">6% - Servicios s/ contrato laboral</option>
+                  <option value="2.5" selected="@(Model.PorcentajeRetencion == 2.5m)">2.5% - Compra de Bienes</option>
+              </select>
+              <div class="d-flex justify-content-between">
+                  <span class="text-danger small fw-semibold">Retefuente estimada</span>
+                  <strong id="valRetencion" class="text-danger">-$@Model.MontoRetencion.ToString("N2")</strong>
+              </div>
+          </div>
+      </div>
+
+      <div class="d-flex justify-content-between pt-3">
+        <span style="font-size:18px;font-weight:700;">TOTAL</span>
+        <span id="valTotal" style="font-size:22px;font-weight:800;color:var(--primary);">$@Model.Total.ToString("N2")</span>
+      </div>
+      <div class="mt-3">
+        <span class="badge @(Model.Pagada ? "bg-success" : "bg-warning text-dark") w-100 py-2" style="font-size:14px;">
+          <i class="bi bi-@(Model.Pagada ? "check-circle" : "clock-history") me-1"></i>
+          @(Model.Pagada ? "Pagada" : "Pendiente de Pago")
+        </span>
+      </div>
+    </div>
+
+    <!-- Vehicle info -->
+    <div class="card-custom p-4 mt-3">
+      <h6 style="font-weight:700;margin-bottom:12px;">Info del Vehículo</h6>
+      <div style="font-size:14px;color:var(--text-muted);">
+        <div><i class="bi bi-car-front me-2"></i>@Model.VehiculoDescripcion</div>
+        <div class="mt-1"><i class="bi bi-person me-2"></i>@Model.ClienteNombre</div>
+        <div class="mt-1"><i class="bi bi-telephone me-2"></i>@Model.ClienteTelefono</div>
+        <div class="mt-1"><i class="bi bi-calendar me-2"></i>Entrada: @Model.FechaEntrada.ToString("dd/MM/yyyy HH:mm")</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    const ordenId     = '@Model.Id';
+    const antiForgery = () => document.querySelector('#formAgregarItem [name="__RequestVerificationToken"]')?.value ?? '';
+
+    // ── DOM refs ──────────────────────────────────────────────────────────────
+    const form          = document.getElementById('formAgregarItem');
+    if (!form) return;   // orden bloqueada — sin formulario
+
+    const inpBusqueda   = document.getElementById('inp-busqueda');
+    const listaResultados = document.getElementById('lista-productos');
+    const inpDesc       = document.getElementById('inp-desc');        // hidden → name=descripcion
+    const inpProdId     = document.getElementById('inp-prodId');      // hidden → name=productoInventarioId
+    const inpTipoHidden = document.getElementById('inp-tipo-hidden'); // hidden → name=tipo
+    const inpTipoSelect = document.getElementById('inp-tipo-select'); // visible selector
+    const inpCant       = document.getElementById('inp-cant');
+    const inpPrecio     = document.getElementById('inp-precio');
+    const badgeStock    = document.getElementById('badge-stock');
+    const errorDiv      = document.getElementById('errorItem');
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    const fmt = n => '$' + Number(n).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function flashGuardado() {
+        const msg = document.getElementById('guardadoMsg');
+        if (!msg) return;
+        msg.style.display = 'inline';
+        setTimeout(() => msg.style.display = 'none', 2500);
+    }
+
+    function showError(msg) {
+        errorDiv.textContent    = msg;
+        errorDiv.style.display  = 'block';
+    }
+    function clearError() { errorDiv.style.display = 'none'; }
+
+    function refreshTotals(orden) {
+        document.getElementById('valSubtotal').textContent  = fmt(orden.subtotal);
+        document.getElementById('valDescuento').textContent = '-' + fmt(orden.descuento);
+        document.getElementById('valIva').textContent       = fmt(orden.iva);
+        
+        // Withholding elements
+        const sectionRet = document.getElementById('sectionRetencionDetalle');
+        const valRet     = document.getElementById('valRetencion');
+        if (orden.aplicarRetencion) {
+            sectionRet.style.display = 'block';
+            valRet.textContent       = '-' + fmt(orden.montoRetencion);
+        } else {
+            sectionRet.style.display = 'none';
+        }
+
+        document.getElementById('valTotal').textContent     = fmt(orden.total);
+    }
+
+    function buildRow(item) {
+        const badge = item.tipo === 'Servicio'
+            ? '<span class="badge bg-primary">Servicio</span>'
+            : '<span class="badge bg-info text-dark">Refacción</span>';
+        return `<tr data-id="${item.id}">
+            <td>${item.descripcion}</td>
+            <td>${badge}</td>
+            <td>${item.cantidad}</td>
+            <td>${fmt(item.precioUnitario)}</td>
+            <td><strong>${fmt(item.subtotal)}</strong></td>
+            <td>
+              <form method="post" action="/Ordenes/EliminarItem" onsubmit="return confirm('¿Eliminar este ítem?');">
+                <input type="hidden" name="__RequestVerificationToken" value="${antiForgery()}" />
+                <input type="hidden" name="ordenId" value="${ordenId}" />
+                <input type="hidden" name="itemId"  value="${item.id}" />
+                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>`;
+    }
+
+    // ── Aplicar reglas UX según tipo ──────────────────────────────────────────
+    //  esServicio: precio editable, cant=1 bloqueada, sin badge stock
+    //  esRefaccion: precio readonly, cant editable, badge con stock disponible
+    function aplicarReglaTipo(tipo, stock) {
+        const esServicio = tipo === 'Servicio';
+
+        // Tipo selector + hidden
+        inpTipoSelect.value  = tipo;
+        inpTipoHidden.value  = tipo;
+
+        // Cantidad
+        if (esServicio) {
+            inpCant.value    = '1';
+            inpCant.readOnly = true;
+            inpCant.style.opacity = '0.6';
+        } else {
+            inpCant.readOnly = false;
+            inpCant.style.opacity = '1';
+        }
+
+        // Precio
+        inpPrecio.readOnly       = !esServicio;
+        inpPrecio.style.opacity  = esServicio ? '1' : '0.6';
+        inpPrecio.title          = esServicio ? '' : 'Precio traído del inventario (solo lectura)';
+
+        // Badge de stock
+        if (!esServicio && stock != null) {
+            badgeStock.textContent  = `Stock: ${stock}`;
+            badgeStock.className    = 'badge ' + (stock <= 0 ? 'bg-danger' : stock < 5 ? 'bg-warning text-dark' : 'bg-info text-dark');
+            badgeStock.style.display = 'inline-block';
+        } else {
+            badgeStock.style.display = 'none';
+        }
+    }
+
+    // ── Seleccionar producto del dropdown ─────────────────────────────────────
+    function seleccionarProducto(p) {
+        inpBusqueda.value = `${p.nombre}${p.sku ? ' – ' + p.sku : ''}`;
+        inpDesc.value     = p.nombre;
+        inpProdId.value   = p.tipoItem === 'Servicio' ? '' : p.id;  // Servicios → sin prodId
+        inpPrecio.value   = p.precioVenta;
+        cerrarDropdown();
+        aplicarReglaTipo(p.tipoItem, p.stock);
+    }
+
+    // ── Limpiar selección (al borrar el texto o cambiar tipo manualmente) ─────
+    function limpiarSeleccion() {
+        inpDesc.value    = '';
+        inpProdId.value  = '';
+        inpPrecio.value  = '';
+        inpCant.value    = '1';
+        inpCant.readOnly = false;
+        inpCant.style.opacity = '1';
+        inpPrecio.readOnly    = false;
+        inpPrecio.style.opacity = '1';
+        badgeStock.style.display = 'none';
+    }
+
+    function cerrarDropdown() {
+        listaResultados.style.display = 'none';
+        listaResultados.innerHTML = '';
+    }
+
+    // ── Typeahead: búsqueda con debounce ──────────────────────────────────────
+    let debounceTimer;
+    inpBusqueda.addEventListener('input', function () {
+        limpiarSeleccion();
+        clearError();
+        const q = this.value.trim();
+        if (q.length < 2) { cerrarDropdown(); return; }
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+            try {
+                const resp = await fetch(`/Ordenes/BuscarProductos?q=${encodeURIComponent(q)}`);
+                const items = await resp.json();
+                renderDropdown(items);
+            } catch { cerrarDropdown(); }
+        }, 250);
+    });
+
+    function renderDropdown(items) {
+        listaResultados.innerHTML = '';
+        if (!items.length) {
+            listaResultados.innerHTML = '<li class="list-group-item" style="color:var(--text-muted);font-size:13px;">Sin resultados en inventario</li>';
+            listaResultados.style.display = 'block';
+            return;
+        }
+        items.forEach(p => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action';
+            li.style.cssText = 'cursor:pointer;font-size:13px;background:var(--surface2);color:var(--text);border-color:var(--border);';
+
+            const tipoBadge = p.tipoItem === 'Servicio'
+                ? '<span class="badge bg-primary ms-1" style="font-size:10px;">Servicio</span>'
+                : `<span class="badge bg-info text-dark ms-1" style="font-size:10px;">Refacción · Stock: ${p.stock}</span>`;
+
+            li.innerHTML = `<span style="font-weight:600;">${p.nombre}</span>${p.sku ? ' <small style="color:var(--text-muted);">' + p.sku + '</small>' : ''}${tipoBadge}`
+                         + `<span style="float:right;font-weight:700;color:var(--primary);">${fmt(p.precioVenta)}</span>`;
+
+            li.addEventListener('mousedown', (e) => { e.preventDefault(); seleccionarProducto(p); });
+            listaResultados.appendChild(li);
+        });
+        listaResultados.style.display = 'block';
+    }
+
+    // Cerrar dropdown si se hace clic fuera
+    document.addEventListener('click', e => {
+        if (!form.contains(e.target)) cerrarDropdown();
+    });
+
+    // ── Cambio manual del selector de tipo ───────────────────────────────────
+    // Si el usuario elige manualmente "Servicio", libera precio y bloquea cant
+    // Si elige "Refacción", limpiar todo y pedir que busque en inventario
+    inpTipoSelect.addEventListener('change', function () {
+        const tipo = this.value;
+        inpTipoHidden.value = tipo;
+        limpiarSeleccion();
+        inpBusqueda.value = '';
+        if (tipo === 'Servicio') {
+            // Modo servicio libre: descripción manual, precio editable, cant=1
+            inpCant.value    = '1';
+            inpCant.readOnly = true;
+            inpCant.style.opacity = '0.6';
+            inpPrecio.readOnly = false;
+            inpPrecio.style.opacity = '1';
+        } else {
+            // Modo refacción: debe elegir del inventario
+            inpPrecio.readOnly = true;
+            inpPrecio.style.opacity = '0.6';
+        }
+    });
+
+    // Estado inicial: Servicio seleccionado → precio editable, cant=1 bloqueada
+    aplicarReglaTipo('Servicio', null);
+
+    // ── Submit AJAX ───────────────────────────────────────────────────────────
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        clearError();
+
+        const tipo = inpTipoHidden.value;
+
+        // Sincronizar descripción: si es servicio libre (sin producto de inventario)
+        // usar el texto del campo de búsqueda visible como descripción
+        if (!inpDesc.value.trim()) {
+            const texto = inpBusqueda.value.trim();
+            if (!texto) { showError('Escribe la descripción del servicio.'); return; }
+            if (tipo === 'Refaccion') {
+                showError('Las refacciones deben seleccionarse desde el inventario. Usa el buscador.');
+                return;
+            }
+            inpDesc.value = texto;
+        }
+
+        // Guardia: refacción sin producto del inventario
+        if (tipo === 'Refaccion' && !inpProdId.value) {
+            showError('Selecciona la refacción desde el buscador de inventario.');
+            inpBusqueda.focus();
+            return;
+        }
+
+        const btn = document.getElementById('btnAgregar');
+        btn.disabled      = true;
+        btn.innerHTML     = '<span class="spinner-border spinner-border-sm"></span>';
+
+        const body = new FormData(form);
+
+        try {
+            const resp = await fetch('/Ordenes/AgregarItemJson', { method: 'POST', body });
+            const data = await resp.json();
+
+            if (data.ok && data.orden) {
+                // Rebuild table
+                document.getElementById('itemsTbody').innerHTML = data.orden.items.map(buildRow).join('');
+                refreshTotals(data.orden);
+
+                // Reset full form state
+                inpBusqueda.value = '';
+                limpiarSeleccion();
+                inpTipoSelect.value  = 'Servicio';
+                inpTipoHidden.value  = 'Servicio';
+                aplicarReglaTipo('Servicio', null);
+                flashGuardado();
+            } else {
+                showError(data.error ?? 'Error desconocido.');
+            }
+        } catch {
+            showError('Error de red. Verifica tu conexión.');
+        } finally {
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+        }
+    });
+
+    // ── Withholding Persistence Logic ────────────────────────────────────────
+    const toggleRet = document.getElementById('toggleRetencion');
+    const selectRet = document.getElementById('selectPorcentajeRet');
+
+    async function syncRetention() {
+        const aplicar = toggleRet.checked;
+        const porcentaje = parseFloat(selectRet.value);
+
+        try {
+            const formData = new FormData();
+            formData.append('id', ordenId);
+            formData.append('aplicar', aplicar);
+            formData.append('porcentaje', porcentaje);
+            formData.append('__RequestVerificationToken', antiForgery());
+
+            const resp = await fetch('/Ordenes/ActualizarRetencion', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+
+            if (data.ok) {
+                // Reload order json to refresh UI totals correctly via refreshTotals
+                const respO = await fetch(`/Ordenes/GetOrdenJson/${ordenId}`);
+                const orden = await respO.json();
+                refreshTotals(orden);
+                flashGuardado();
+            } else {
+                alert('Error al actualizar retención: ' + data.error);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    if (toggleRet) {
+        toggleRet.addEventListener('change', syncRetention);
+        selectRet.addEventListener('change', syncRetention);
+    }
+})();
+</script>
+}

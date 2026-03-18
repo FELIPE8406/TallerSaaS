@@ -1,0 +1,259 @@
+@{
+    ViewData["Title"] = "Traslado entre Bodegas";
+    var bodegas = ViewBag.Bodegas as List<TallerSaaS.Application.DTOs.BodegaDto> ?? new();
+}
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="page-title">🔄 Traslado de Stock</h1>
+    <p class="text-muted mb-0">Transfiere unidades de un producto entre bodegas</p>
+  </div>
+  <a asp-action="Index" class="btn btn-outline-secondary">← Bodegas</a>
+</div>
+
+@if (TempData["Exito"] != null)
+{
+  <div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle-fill me-2"></i>@TempData["Exito"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+}
+@if (TempData["Error"] != null)
+{
+  <div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-circle-fill me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+}
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card glass-card">
+      <div class="card-body p-4">
+
+        <form asp-action="Traslado" method="post" id="formTraslado">
+          @Html.AntiForgeryToken()
+          <!-- Hidden: set by autocomplete JS -->
+          <input type="hidden" name="productoId" id="productoIdHidden" />
+
+          <!-- ── Step 1: Buscador de Producto ──────────────────────────── -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-search me-1" style="color:var(--primary);"></i>Producto *
+            </label>
+            <div class="position-relative">
+              <input type="text" id="buscarProducto" class="form-control"
+                     placeholder="Escribe nombre o SKU del producto…"
+                     autocomplete="off" required />
+              <div id="autocompleteDropdown"
+                   style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1050;
+                          background:#fff;border:1px solid #D2D2D7;border-radius:12px;
+                          box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:280px;overflow-y:auto;">
+              </div>
+            </div>
+            <!-- Stock preview panel -->
+            <div id="stockPreview" style="display:none;margin-top:10px;"
+                 class="d-flex align-items-center gap-3 p-3 rounded-3"
+                 style="background:var(--surface2,#f5f5f7);border:1px solid var(--border,#D2D2D7);">
+              <div>
+                <div class="fw-semibold" id="previewNombre"></div>
+                <small class="text-muted" id="previewSku"></small>
+              </div>
+              <div class="ms-auto text-end">
+                <div style="font-size:13px;color:var(--text-muted);">Stock disponible</div>
+                <div style="font-size:22px;font-weight:700;" id="previewStock">—</div>
+                <div style="font-size:11px;color:var(--text-muted);">Mín: <span id="previewMin">—</span>
+                  · Bodega: <span id="previewBodega">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Step 2: Origen ➔ Flecha ➔ Destino ───────────────────── -->
+          <div class="d-flex align-items-center gap-3 mb-4">
+            <!-- Bodega Origen -->
+            <div class="flex-fill">
+              <label class="form-label fw-semibold text-danger">
+                <i class="bi bi-box-arrow-right me-1"></i>Bodega Origen *
+              </label>
+              <select name="bodegaOrigenId" id="bodegaOrigenSelect" class="form-select" required>
+                <option value="">Seleccionar origen…</option>
+                @foreach (var b in bodegas)
+                {
+                  <option value="@b.Id">@b.Nombre @(b.Ubicacion != null ? $"({b.Ubicacion})" : "")</option>
+                }
+              </select>
+            </div>
+
+            <!-- Flecha central -->
+            <div style="flex-shrink:0;font-size:28px;margin-top:24px;color:var(--primary,#0066cc);">
+              ⟶
+            </div>
+
+            <!-- Bodega Destino -->
+            <div class="flex-fill">
+              <label class="form-label fw-semibold text-success">
+                <i class="bi bi-box-arrow-in-right me-1"></i>Bodega Destino *
+              </label>
+              <select name="bodegaDestinoId" class="form-select" required>
+                <option value="">Seleccionar destino…</option>
+                @foreach (var b in bodegas)
+                {
+                  <option value="@b.Id">@b.Nombre @(b.Ubicacion != null ? $"({b.Ubicacion})" : "")</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- ── Step 3: Cantidad & Observaciones ─────────────────────── -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Cantidad *</label>
+            <input name="cantidad" id="cantidadInput" type="number" min="1" class="form-control"
+                   placeholder="1" required />
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Observaciones</label>
+            <textarea name="observaciones" class="form-control" rows="2"
+                      placeholder="Motivo del traslado (opcional)"></textarea>
+          </div>
+
+          <button type="button" class="btn btn-warning w-100 fw-bold" onclick="validarYEnviar()">
+            <i class="bi bi-arrow-left-right me-1"></i> Ejecutar Traslado
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+/* ── State ───────────────────────────────────────────────────────────────── */
+let productoSeleccionado = null;   // { id, nombre, sku, stock, stockMinimo, bodegaNombre }
+let debounceTimer = null;
+
+/* ── Autocomplete ────────────────────────────────────────────────────────── */
+const inputBuscar    = document.getElementById('buscarProducto');
+const dropdown       = document.getElementById('autocompleteDropdown');
+const hiddenProdId   = document.getElementById('productoIdHidden');
+
+inputBuscar.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  const q = inputBuscar.value.trim();
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+  debounceTimer = setTimeout(() => buscarProductos(q), 280);
+});
+
+async function buscarProductos(q) {
+  try {
+    const res = await fetch(`/Inventario/BuscarProductos?q=${encodeURIComponent(q)}`);
+    const items = await res.json();
+    renderDropdown(items);
+  } catch (e) { console.error('Error buscando productos', e); }
+}
+
+function renderDropdown(items) {
+  if (!items.length) { dropdown.style.display = 'none'; return; }
+  dropdown.innerHTML = items.map((p, i) => `
+    <div class="dropdown-item-custom" data-idx="${i}"
+         style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #F2F2F7;
+                display:flex;align-items:center;justify-content:space-between;"
+         onmousedown="seleccionarProducto(${i})"
+         onmouseover="this.style.background='#F5F5F7'"
+         onmouseout="this.style.background=''">
+      <div>
+        <div style="font-weight:600;font-size:14px;">${escHtml(p.nombre)}</div>
+        ${p.sku ? `<div style="font-size:11px;color:#6E6E73;font-family:monospace;">${escHtml(p.sku)}</div>` : ''}
+      </div>
+      <div style="text-align:right;font-size:13px;">
+        <span class="badge bg-${p.stock <= 0 ? 'danger' : p.stock <= p.stockMinimo ? 'warning text-dark' : 'success'}">
+          ${p.stock} uds
+        </span>
+        ${p.bodegaNombre ? `<div style="font-size:10px;color:#6E6E73;">${escHtml(p.bodegaNombre)}</div>` : ''}
+      </div>
+    </div>`).join('');
+
+  /* store items for selection */
+  dropdown._items = items;
+  dropdown.style.display = 'block';
+}
+
+function seleccionarProducto(idx) {
+  const p = dropdown._items[idx];
+  productoSeleccionado = p;
+  hiddenProdId.value   = p.id;
+  inputBuscar.value    = p.nombre + (p.sku ? ` [${p.sku}]` : '');
+  dropdown.style.display = 'none';
+  mostrarPreview(p);
+}
+
+/* ── Stock preview ───────────────────────────────────────────────────────── */
+function mostrarPreview(p) {
+  document.getElementById('previewNombre').textContent = p.nombre;
+  document.getElementById('previewSku').textContent    = p.sku ? `SKU: ${p.sku}` : '';
+  document.getElementById('previewStock').textContent  = p.stock;
+  document.getElementById('previewMin').textContent    = p.stockMinimo;
+  document.getElementById('previewBodega').textContent = p.bodegaNombre || '—';
+  document.getElementById('previewStock').style.color  =
+    p.stock <= 0 ? '#FF3B30' : p.stock <= p.stockMinimo ? '#FF9500' : '#34C759';
+  document.getElementById('stockPreview').style.display = 'flex';
+}
+
+/* ── Close dropdown on outside click ────────────────────────────────────── */
+document.addEventListener('click', e => {
+  if (!e.target.closest('#buscarProducto') && !e.target.closest('#autocompleteDropdown'))
+    dropdown.style.display = 'none';
+});
+
+/* ── Validación antes de envío: alerta de stock mínimo ──────────────────── */
+function validarYEnviar() {
+  if (!hiddenProdId.value) {
+    Swal.fire({ icon:'warning', title:'Producto requerido', text:'Selecciona un producto del buscador.', timer:2500, showConfirmButton:false });
+    return;
+  }
+
+  const cantidad = parseInt(document.getElementById('cantidadInput').value) || 0;
+  if (cantidad <= 0) {
+    Swal.fire({ icon:'warning', title:'Cantidad inválida', text:'Ingresa una cantidad mayor a 0.', timer:2500, showConfirmButton:false });
+    return;
+  }
+
+  if (!productoSeleccionado) { document.getElementById('formTraslado').submit(); return; }
+
+  const { stock, stockMinimo, bodegaNombre, nombre } = productoSeleccionado;
+
+  if (stock < cantidad) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Stock insuficiente',
+      html: `<b>${escHtml(nombre)}</b> tiene <b>${stock}</b> und. disponibles.<br>No se puede trasladar <b>${cantidad}</b>.`
+    });
+    return;
+  }
+
+  const saldoResultante = stock - cantidad;
+  if (saldoResultante < stockMinimo) {
+    Swal.fire({
+      icon: 'warning',
+      title: '⚠ Stock por debajo del mínimo',
+      html: `Este traslado dejará <b>${escHtml(bodegaNombre || nombre)}</b> con <b>${saldoResultante}</b> unidades, por debajo del mínimo configurado de <b>${stockMinimo}</b>.<br><br>¿Deseas continuar de todas formas?`,
+      showCancelButton: true,
+      confirmButtonText: 'Sí, trasladar igual',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#FF9500',
+      cancelButtonColor: '#6C6CFF'
+    }).then(r => { if (r.isConfirmed) document.getElementById('formTraslado').submit(); });
+    return;
+  }
+
+  document.getElementById('formTraslado').submit();
+}
+
+/* ── HTML escape ─────────────────────────────────────────────────────────── */
+function escHtml(s) {
+  return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+}
+</script>
+}

@@ -1,0 +1,207 @@
+@{
+    ViewData["Title"] = "Módulo Contable";
+    bool isPremium = ViewBag.IsPremium ?? false;
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold text-white">Centro Contable</h1>
+            <p class="text-secondary mb-0">Gestión automatizada y reportes financieros (PUC Colombia)</p>
+        </div>
+        <div>
+            @if (isPremium)
+            {
+                <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill">
+                    <i class="bi bi-star-fill me-1"></i> Plan Empresarial Activo
+                </span>
+            }
+            else
+            {
+                <span class="badge bg-warning-subtle text-warning border border-warning px-3 py-2 rounded-pill">
+                    <i class="bi bi-lock-fill me-1"></i> Requiere Plan Empresarial
+                </span>
+            }
+        </div>
+    </div>
+
+    @if (!isPremium)
+    {
+        <div class="premium-lock-overlay rounded-4 p-5 text-center mb-5" style="background: rgba(28, 28, 30, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);">
+            <div class="mb-4">
+                <div class="icon-circle bg-warning-subtle text-warning mx-auto" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 2rem;">
+                    <i class="bi bi-gem"></i>
+                </div>
+            </div>
+            <h2 class="text-white fw-bold mb-3">Lleva tu taller al siguiente nivel</h2>
+            <p class="text-secondary mx-auto mb-4" style="max-width: 600px;">
+                La contabilidad automatizada es una función exclusiva del <strong>Plan Empresarial</strong>. 
+                Aunque estamos registrando tus movimientos en segundo plano ("Dark Data"), necesitas actualizar tu plan para acceder a los reportes, balances y libros auxiliares.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="#" class="btn btn-warning px-4 py-2 fw-bold">Ver Planes de Suscripción</a>
+                <button class="btn btn-outline-secondary px-4 py-2 border-dashed">Solicitar Demo</button>
+            </div>
+        </div>
+    }
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="stat-card p-4 rounded-4 @(isPremium ? "" : "opacity-50")" style="background: #1C1C1E; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="p-2 rounded-3 bg-primary-subtle text-primary me-3">
+                        <i class="bi bi-diagram-3 fs-4"></i>
+                    </div>
+                    <h6 class="mb-0 text-secondary">Cuentas en PUC</h6>
+                </div>
+                <h2 class="text-white mb-0">@ViewBag.TotalCuentas</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card p-4 rounded-4 @(isPremium ? "" : "opacity-50")" style="background: #1C1C1E; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="p-2 rounded-3 bg-info-subtle text-info me-3">
+                        <i class="bi bi-journal-text fs-4"></i>
+                    </div>
+                    <h6 class="mb-0 text-secondary">Asientos Generados</h6>
+                </div>
+                <h2 class="text-white mb-0">@ViewBag.TotalAsientos</h2>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card p-4 rounded-4 @(isPremium ? "" : "opacity-50")" style="background: #1C1C1E; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="p-2 rounded-3 bg-success-subtle text-success me-3">
+                        <i class="bi bi-check2-circle fs-4"></i>
+                    </div>
+                    <h6 class="mb-0 text-secondary">Integración ERP</h6>
+                </div>
+                <h2 class="text-white mb-0">Activa</h2>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="text-white mb-4 fw-bold">Reportes Financieros</h4>
+    <div class="row g-4">
+        <!-- Libro Auxiliar -->
+        <div class="col-md-4">
+            <div class="report-card p-4 rounded-4 h-100 d-flex flex-column" style="background: #1C1C1E; border: 1px solid rgba(255,255,255,0.05);">
+                <h5 class="text-white border-bottom pb-3 mb-3 border-secondary border-opacity-25">Libro Auxiliar</h5>
+                <p class="text-secondary small flex-grow-1">Detalle cronológico de movimientos por cuenta y tercero (NIT). Ideal para auditorías y conciliaciones.</p>
+                <div class="mt-auto">
+                    @if (isPremium)
+                    {
+                        <form asp-action="LibroAuxiliarExcel" method="get">
+                            <div class="mb-3">
+                                <label class="text-secondary small mb-1">PeriodoDesde</label>
+                                <input type="date" name="desde" class="form-control form-control-sm bg-dark border-secondary text-white border-opacity-50" />
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-file-earmark-excel me-2"></i> Exportar Excel
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary w-100" disabled>
+                            <i class="bi bi-lock-fill me-2"></i> Bloqueado
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Balance de Prueba -->
+        <div class="col-md-4">
+            <div class="report-card p-4 rounded-4 h-100 d-flex flex-column" style="background: #1C1C1E; border: 1px solid rgba(255,255,255,0.05);">
+                <h5 class="text-white border-bottom pb-3 mb-3 border-secondary border-opacity-25">Balance de Prueba</h5>
+                <p class="text-secondary small flex-grow-1">Resumen de saldos débitos y créditos de todas las cuentas. Verificación de partida doble.</p>
+                <div class="mt-auto">
+                    @if (isPremium)
+                    {
+                        <form asp-action="BalancePruebaExcel" method="get">
+                            <button type="submit" class="btn btn-outline-info w-100">
+                                <i class="bi bi-file-earmark-excel me-2"></i> Generar Balance
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary w-100" disabled>
+                            <i class="bi bi-lock-fill me-2"></i> Bloqueado
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Certificados de Retención -->
+        <div class="col-md-4">
+            <div class="report-card p-4 rounded-4 h-100 d-flex flex-column" style="background: #1C1C1E; border: 1px solid rgba(255,255,255,0.05);">
+                <h5 class="text-white border-bottom pb-3 mb-3 border-secondary border-opacity-25">Certificado de Retención</h5>
+                <p class="text-secondary small flex-grow-1">Generación de certificados tributarios para tus clientes (Terceros) de forma automatizada.</p>
+                <div class="mt-auto">
+                    @if (isPremium)
+                    {
+                        <button class="btn btn-outline-light w-100" data-bs-toggle="modal" data-bs-target="#certificadoModal">
+                            <i class="bi bi-file-earmark-pdf me-2"></i> Emitir Certificado
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary w-100" disabled>
+                            <i class="bi bi-lock-fill me-2"></i> Bloqueado
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isPremium)
+{
+    <!-- Modal Certificado -->
+    <div class="modal fade" id="certificadoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-secondary border-opacity-25 rounded-4 shadow-lg">
+                <div class="modal-header border-bottom border-secondary border-opacity-10">
+                    <h5 class="modal-title text-white">Generar Certificado Tributario</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form asp-action="CertificadoRetencionesPdf" method="get">
+                    <div class="modal-body p-4">
+                        <div class="mb-4">
+                            <label class="form-label text-secondary small fw-bold text-uppercase">Tercero (Cliente)</label>
+                            <select name="terceroId" class="form-select bg-dark border-secondary border-opacity-50 text-white" required>
+                                <option value="">Seleccione un tercero...</option>
+                                @if (ViewBag.Terceros != null)
+                                {
+                                    foreach (var t in ViewBag.Terceros)
+                                    {
+                                        <option value="@t.Id">@t.NombreCompleto</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-bold text-uppercase">Año Gravable</label>
+                            <input type="number" name="anio" value="@DateTime.Now.AddYears(-1).Year" class="form-control bg-dark border-secondary border-opacity-50 text-white" />
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-secondary border-opacity-10 p-3">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary px-4">Generar PDF</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .stat-card:hover { transform: translateY(-5px); transition: transform 0.3s ease; }
+    .report-card { transition: all 0.3s ease; }
+    .report-card:hover { border-color: rgba(255,255,255,0.2) !important; background: #2C2C2E !important; }
+    .border-dashed { border-style: dashed !important; }
+</style>

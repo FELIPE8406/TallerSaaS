@@ -1,0 +1,19 @@
+@model TallerSaaS.Domain.Entities.Tenant
+<div class="header-identity-wrap" style="display:flex;align-items:center;gap:12px;">
+    @if (!string.IsNullOrEmpty(Model.Logo))
+    {
+        <div class="header-tenant-logo" style="width:32px;height:32px;border-radius:8px;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,0.05);">
+            <img src="@Model.Logo" style="width:100%;height:100%;object-fit:contain;" alt="Logo" />
+        </div>
+    }
+    else
+    {
+        <div class="header-tenant-avatar" style="width:32px;height:32px;border-radius:8px;background:rgba(0,122,255,0.1);color:#007AFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border:1px solid rgba(0,122,255,0.1);">
+            @Model.Nombre.Substring(0, 1).ToUpper()
+        </div>
+    }
+    <div class="header-tenant-info">
+        <div class="header-tenant-name" style="font-weight:700;font-size:14px;color:var(--text);letter-spacing:-.01em;">@Model.Nombre</div>
+        <div class="header-tenant-label" style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;">Panel de Gestión</div>
+    </div>
+</div>

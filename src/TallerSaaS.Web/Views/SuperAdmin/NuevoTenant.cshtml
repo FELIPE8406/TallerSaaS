@@ -1,0 +1,417 @@
+@using TallerSaaS.Domain.Entities
+@using TallerSaaS.Web.Models
+@model NuevoTenantViewModel
+@{
+    ViewData["Title"] = "Nuevo Taller";
+    var planesData = ViewBag.PlanesData as List<PlanSuscripcion> ?? new();
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="bi bi-building-add me-2" style="color:var(--primary);"></i>Registrar Nuevo Taller
+        </h1>
+        <p class="page-subtitle">Crea un workspace SaaS completo con su administrador inicial</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Volver al Panel
+    </a>
+</div>
+
+<!-- Validation Summary -->
+<div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" style="border-radius:12px;font-size:14px;"></div>
+
+<div class="row g-4">
+
+    <!-- ════ Left — Form ════════════════════════════════════════════════════ -->
+    <div class="col-12 col-xl-7">
+        <form asp-action="NuevoTenant" method="post" id="nuevoTenantForm" autocomplete="off" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <!-- ── Bloque 1: Datos del Taller ─────────────────────────────── -->
+            <div class="nt-card mb-4">
+                <div class="nt-card-header">
+                    <span class="nt-card-badge" style="background:#EBF4FF;color:#0066CC;">
+                        <i class="bi bi-buildings me-1"></i>1
+                    </span>
+                    <div>
+                        <div class="nt-card-title">Datos del Taller</div>
+                        <div class="nt-card-sub">Información comercial y fiscal</div>
+                    </div>
+                </div>
+                <div class="nt-card-body">
+
+                    <!-- Branding Section: Logo Preview & Upload -->
+                    <div class="d-flex align-items-center gap-4 mb-4 p-3" style="background:rgba(0,102,204,0.03);border-radius:12px;border:1px dashed #D2D2D7;">
+                        <div id="logoPreviewContainer" style="width:100px;height:100px;border-radius:12px;background:#F5F5F7;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid #D2D2D7;flex-shrink:0;">
+                            <i class="bi bi-image" style="font-size:32px;color:#AEAEB2;" id="logoPlaceholder"></i>
+                            <img id="logoPreview" src="#" style="width:100%;height:100%;object-fit:contain;display:none;" />
+                        </div>
+                        <div class="flex-1">
+                            <label class="form-label mb-1" style="font-weight:700;">Logo del Taller</label>
+                            <p class="text-muted mb-2" style="font-size:12px;">Formatos: PNG, JPG (Recomendado: Fondo transparente, 512x512px)</p>
+                            <div class="d-flex gap-2">
+                                <label for="logoInput" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-upload m-1"></i>Subir Logo
+                                </label>
+                                <input asp-for="LogoArchivo" type="file" id="logoInput" class="d-none" accept="image/*" onchange="previewLogo(this)" />
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="resetLogo()" id="btnResetLogo" style="display:none;font-size:12px;">Remover</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Nombre" class="form-label">Nombre del Taller *</label>
+                        <input asp-for="Nombre" class="form-control"
+                               placeholder="Ej. Taller Mecánico Los Andes" maxlength="200" />
+                        <span asp-validation-for="Nombre" class="nt-error"></span>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="RFC" class="form-label">NIT / Cédula</label>
+                            <div class="input-icon-wrap">
+                                <i class="bi bi-hash input-icon"></i>
+                                <input asp-for="RFC" class="form-control input-has-icon"
+                                       placeholder="Ej. 900.123.456-1" maxlength="30" />
+                            </div>
+                            <span asp-validation-for="RFC" class="nt-error"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label">Email de Contacto *</label>
+                            <div class="input-icon-wrap">
+                                <i class="bi bi-envelope input-icon"></i>
+                                <input asp-for="Email" type="email" class="form-control input-has-icon"
+                                       placeholder="taller@ejemplo.com" />
+                            </div>
+                            <span asp-validation-for="Email" class="nt-error"></span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="Telefono" class="form-label">Teléfono</label>
+                            <div class="input-icon-wrap">
+                                <i class="bi bi-telephone input-icon"></i>
+                                <input asp-for="Telefono" class="form-control input-has-icon"
+                                       placeholder="Ej. 601 234 5678" maxlength="30" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="PlanSuscripcionId" class="form-label">Plan de Suscripción *</label>
+                            <select asp-for="PlanSuscripcionId" asp-items="ViewBag.Planes"
+                                    class="form-select" id="planSelect"
+                                    onchange="syncPlanCard(this)" required>
+                                <option value="">Seleccionar plan...</option>
+                            </select>
+                            <span asp-validation-for="PlanSuscripcionId" class="nt-error"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label asp-for="Direccion" class="form-label">Dirección</label>
+                        <input asp-for="Direccion" class="form-control"
+                               placeholder="Calle, carrera, barrio — ciudad" maxlength="300" />
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── Bloque 2: Administrador Inicial ───────────────────────── -->
+            <div class="nt-card mb-4">
+                <div class="nt-card-header">
+                    <span class="nt-card-badge" style="background:#E9F7EF;color:#34C759;">
+                        <i class="bi bi-person-gear me-1"></i>2
+                    </span>
+                    <div>
+                        <div class="nt-card-title">Administrador Inicial</div>
+                        <div class="nt-card-sub">Credenciales del primer usuario del taller</div>
+                    </div>
+                </div>
+                <div class="nt-card-body">
+
+                    <div class="mb-4">
+                        <label asp-for="AdminEmail" class="form-label">Email del Administrador *</label>
+                        <div class="input-icon-wrap">
+                            <i class="bi bi-person-circle input-icon"></i>
+                            <input asp-for="AdminEmail" type="email" class="form-control input-has-icon"
+                                   placeholder="admin@taller.com" />
+                        </div>
+                        <span asp-validation-for="AdminEmail" class="nt-error"></span>
+                        <div class="nt-hint">Este correo será el usuario de acceso al sistema.</div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="AdminPassword" class="form-label">Contraseña Inicial *</label>
+                            <div class="input-icon-wrap">
+                                <i class="bi bi-lock input-icon"></i>
+                                <input asp-for="AdminPassword" type="password"
+                                       class="form-control input-has-icon"
+                                       placeholder="Mínimo 8 caracteres" minlength="8" />
+                            </div>
+                            <span asp-validation-for="AdminPassword" class="nt-error"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="AdminPasswordConfirm" class="form-label">Confirmar Contraseña *</label>
+                            <div class="input-icon-wrap">
+                                <i class="bi bi-lock-fill input-icon"></i>
+                                <input asp-for="AdminPasswordConfirm" type="password"
+                                       class="form-control input-has-icon"
+                                       placeholder="Repite la contraseña" minlength="8" />
+                            </div>
+                            <span asp-validation-for="AdminPasswordConfirm" class="nt-error"></span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── Actions ────────────────────────────────────────────────── -->
+            <div class="d-flex gap-2 justify-content-end">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary" id="btnCrear">
+                    <i class="bi bi-building-add me-1"></i>Crear Taller y Administrador
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- ════ Right — Plan Summary Sidebar ═══════════════════════════════════ -->
+    <div class="col-12 col-xl-5">
+        <div style="position:sticky;top:80px;display:flex;flex-direction:column;gap:16px;">
+
+            <!-- Dynamic plan card -->
+            <div class="nt-card p-0" id="planSummaryCard">
+                <div class="nt-plan-empty" id="planEmptyState">
+                    <i class="bi bi-receipt" style="font-size:36px;opacity:.25;display:block;margin-bottom:10px;"></i>
+                    Selecciona un plan para ver el resumen
+                </div>
+                <div id="planSummaryContent" style="display:none;">
+                    <div class="nt-plan-hero">
+                        <div class="nt-plan-label">Plan seleccionado</div>
+                        <div class="nt-plan-name" id="psNombre"></div>
+                        <div class="nt-plan-price" id="psPrecio"></div>
+                        <div class="nt-plan-users" id="psUsuarios"></div>
+                    </div>
+                    <div class="nt-plan-breakdown">
+                        <div class="nt-breakdown-row">
+                            <span>Plan</span><strong id="psNombreB"></strong>
+                        </div>
+                        <div class="nt-breakdown-row">
+                            <span>Usuarios incluidos</span><strong id="psUsuariosB"></strong>
+                        </div>
+                        <div class="nt-breakdown-row">
+                            <span>Facturación</span><strong>Mensual</strong>
+                        </div>
+                        <div class="nt-breakdown-row nt-breakdown-total">
+                            <span>Total / mes</span><strong id="psTotalB" style="color:#0066CC;"></strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Static plan comparison -->
+            <div class="nt-card">
+                <div class="nt-card-title mb-3" style="font-size:13px;">Comparación de Planes</div>
+                @foreach (var p in planesData)
+                {
+                    var accent = p.Id == 1 ? "#0066CC" : p.Id == 2 ? "#34C759" : "#FF9500";
+                    <div class="nt-plan-row" style="--plan-accent:@accent">
+                        <div class="nt-plan-dot" style="background:@accent;"></div>
+                        <div class="flex-1">
+                            <div class="nt-plan-row-name">@p.Nombre</div>
+                            @if (!string.IsNullOrEmpty(p.Descripcion))
+                            {
+                                <div class="nt-plan-row-desc">@p.Descripcion</div>
+                            }
+                        </div>
+                        <div class="nt-plan-row-price">
+                            <div style="font-weight:700;color:@accent;">$@p.Precio.ToString("N0")</div>
+                            <div style="font-size:11px;color:#6E6E73;">@p.LimiteUsuarios usr/mes</div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- ════ Scoped Styles ════════════════════════════════════════════════════ -->
+<style>
+.nt-card {
+    background: #fff;
+    border: 1px solid #D2D2D7;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.nt-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid #F2F2F7;
+}
+.nt-card-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.nt-card-title  { font-size:14px; font-weight:700; color:#1D1D1F; letter-spacing:-.02em; }
+.nt-card-sub    { font-size:12px; color:#6E6E73; margin-top:2px; }
+.nt-card-body   { padding: 22px 24px 26px; }
+
+.input-icon-wrap { position:relative; }
+.input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #AEAEB2;
+    font-size: 14px;
+    pointer-events: none;
+}
+.input-has-icon { padding-left: 34px !important; }
+
+.nt-error { font-size:12px; color:#FF3B30; display:block; margin-top:4px; }
+.nt-hint  { font-size:11px; color:#6E6E73; margin-top:5px; }
+
+/* Plan Summary Card */
+.nt-plan-empty {
+    text-align: center;
+    padding: 40px 24px;
+    color: #6E6E73;
+    font-size: 13px;
+}
+.nt-plan-hero {
+    background: linear-gradient(135deg, #0066CC 0%, #0055AA 100%);
+    padding: 24px;
+    text-align: center;
+    color: #fff;
+}
+.nt-plan-label  { font-size:11px; opacity:.7; margin-bottom:4px; text-transform:uppercase; letter-spacing:.06em; }
+.nt-plan-name   { font-size:22px; font-weight:800; letter-spacing:-.03em; }
+.nt-plan-price  { font-size:32px; font-weight:900; margin-top:4px; letter-spacing:-.04em; }
+.nt-plan-users  { font-size:12px; opacity:.75; margin-top:3px; }
+.nt-plan-breakdown { padding: 16px 20px 20px; }
+.nt-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 13px;
+    color: #6E6E73;
+    border-bottom: 1px solid #F2F2F7;
+}
+.nt-breakdown-row:last-child { border-bottom: none; }
+.nt-breakdown-total {
+    margin-top: 4px;
+    font-weight: 700;
+    color: #1D1D1F;
+    font-size: 14px;
+}
+
+/* Plan comparison rows */
+.nt-plan-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #F2F2F7;
+}
+.nt-plan-row:last-child { border-bottom: none; }
+.nt-plan-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.flex-1 { flex:1; min-width:0; }
+.nt-plan-row-name  { font-size:13px; font-weight:600; color:#1D1D1F; }
+.nt-plan-row-desc  { font-size:11px; color:#6E6E73; margin-top:2px; }
+.nt-plan-row-price { text-align:right; white-space:nowrap; }
+</style>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script>
+// ── Plan data from server ──────────────────────────────────────────────────
+const planesMeta = {
+@foreach (var p in planesData)
+{
+    @:  '@p.Id': { nombre: '@p.Nombre', precio: @p.Precio, usuarios: @p.LimiteUsuarios },
+}
+};
+
+// ── Logo dynamic preview ──────────────────────────────────────────────────
+function previewLogo(input) {
+    const preview = document.getElementById('logoPreview');
+    const placeholder = document.getElementById('logoPlaceholder');
+    const btnReset = document.getElementById('btnResetLogo');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+            btnReset.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function resetLogo() {
+    const input = document.getElementById('logoInput');
+    const preview = document.getElementById('logoPreview');
+    const placeholder = document.getElementById('logoPlaceholder');
+    const btnReset = document.getElementById('btnResetLogo');
+    
+    input.value = "";
+    preview.src = "#";
+    preview.style.display = 'none';
+    placeholder.style.display = 'block';
+    btnReset.style.display = 'none';
+}
+
+function syncPlanCard(sel) {
+    const val = sel.value;
+    const empty   = document.getElementById('planEmptyState');
+    const content = document.getElementById('planSummaryContent');
+    if (!val || !planesMeta[val]) {
+        empty.style.display   = '';
+        content.style.display = 'none';
+        return;
+    }
+    const p = planesMeta[val];
+    empty.style.display   = 'none';
+    content.style.display = '';
+
+    document.getElementById('psNombre').textContent   = p.nombre;
+    document.getElementById('psNombreB').textContent  = p.nombre;
+    document.getElementById('psPrecio').textContent   = '$' + p.precio.toLocaleString('es-CO');
+    document.getElementById('psTotalB').textContent   = '$' + p.precio.toLocaleString('es-CO');
+    document.getElementById('psUsuarios').textContent = p.usuarios + ' usuarios incluidos';
+    document.getElementById('psUsuariosB').textContent = p.usuarios;
+}
+
+// ── Disable submit button on send to prevent duplicates ────────────────────
+document.getElementById('nuevoTenantForm').addEventListener('submit', function () {
+    const btn = document.getElementById('btnCrear');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creando...';
+});
+
+// ── Init: sync if plan pre-selected (e.g. on validation failure redirect) ──
+document.addEventListener('DOMContentLoaded', function () {
+    const sel = document.getElementById('planSelect');
+    if (sel && sel.value) syncPlanCard(sel);
+});
+</script>
+}

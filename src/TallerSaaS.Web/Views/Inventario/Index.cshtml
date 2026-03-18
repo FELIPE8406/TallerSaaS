@@ -1,0 +1,277 @@
+@{ ViewData["Title"] = "Inventario"; }
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="page-title"><i class="bi bi-box-seam-fill me-2" style="color:var(--primary);"></i>Inventario</h1>
+    <p class="page-subtitle" id="subtitleConteo">
+      ... cargando ...
+    </p>
+  </div>
+  <a asp-action="Crear" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Agregar Producto</a>
+</div>
+
+<!-- Filters -->
+<div class="card-custom p-3 mb-4">
+  <div class="d-flex flex-wrap gap-2">
+    <input type="text" id="buscarLive" class="form-control" style="max-width:280px;"
+           placeholder="Buscar producto o SKU…" value="@ViewBag.Buscar" autocomplete="off" 
+           onkeydown="if(event.key==='Enter') loadInventario(1)" />
+    <select id="categoriaSelect" class="form-select" style="max-width:200px;" onchange="loadInventario(1)">
+      <option value="">Todas las categorias</option>
+      @foreach (var cat in (ViewBag.Categorias as List<string> ?? new()))
+      {
+        <option value="@cat" selected="@(ViewBag.CategoriaFiltro == cat ? "selected" : null)">@cat</option>
+      }
+    </select>
+    <button type="button" class="btn btn-primary" onclick="loadInventario(1)">
+      <i class="bi bi-search me-1"></i>Filtrar
+    </button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Limpiar</a>
+  </div>
+</div>
+
+<div class="card-custom">
+  <div class="table-responsive">
+    <table class="table-custom" id="tablaInventario">
+      <thead>
+        <tr>
+          <th style="width:32px;"></th>
+          <th>Producto / SKU</th>
+          <th class="d-none d-lg-table-cell">Categoría</th>
+          <th>Stock Total</th>
+          <th class="d-none d-lg-table-cell">Precio Venta</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyInventario">
+        <tr><td colspan="6" class="text-center py-5 text-muted">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="paginatorContainer" class="mt-4"></div>
+
+<!-- Hidden form for stock adjustment -->
+<form id="formStock" asp-action="AjustarStock" method="post" style="display:none;">
+  @Html.AntiForgeryToken()
+  <input type="hidden" id="stockId" name="id" />
+  <input type="hidden" id="stockTipo" name="tipo" />
+  <input type="hidden" id="stockCantidad" name="cantidad" />
+</form>
+
+@section Scripts {
+<script>
+let currentInvPageSize = 10;
+
+function agrupar(productos) {
+  const grupos = {};
+  productos.forEach(p => {
+    const nombre = p.nombre || 'Sin nombre';
+    const sku = p.sku || '';
+    const key = sku ? sku.toUpperCase() : ('__' + nombre.toUpperCase());
+    if (!grupos[key]) {
+      grupos[key] = {
+        key, nombre, sku, categoria: p.categoria,
+        stockTotal: 0, stockMinimoTotal: 0,
+        precioVenta: p.precioVenta,
+        items: []
+      };
+    }
+    const g = grupos[key];
+    g.stockTotal      += (p.stock || 0);
+    g.stockMinimoTotal += (p.stockMinimo || 0);
+    g.items.push(p);
+  });
+  return Object.values(grupos).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+}
+
+function nivelClase(total, minimo) {
+  if (total <= 0)       return 'danger';
+  if (total <= minimo)  return 'warning';
+  return 'success';
+}
+
+function barWidth(stock, stMin) {
+  if (stMin <= 0) return 100;
+  return Math.min(100, Math.round((stock / stMin) * 100));
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function loadInventario(page = 1, pageSize = null) {
+  if (pageSize) currentInvPageSize = pageSize;
+  const buscar = document.getElementById('buscarLive').value;
+  const categoria = document.getElementById('categoriaSelect').value;
+  
+  const tbody = document.getElementById('tbodyInventario');
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Cargando…</td></tr>';
+  
+  let url = `/Inventario/GetPaged?page=${page}&size=${currentInvPageSize}`;
+  if (buscar) url += `&buscar=${encodeURIComponent(buscar)}`;
+  if (categoria) url += `&categoria=${encodeURIComponent(categoria)}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      // Update header
+      let htmlSubtitle = `${data.totalCount} productos`;
+      const alertasCount = @(ViewBag.AlertasBajoStock ?? 0);
+      if (alertasCount > 0) {
+          htmlSubtitle += ` <span class="badge bg-danger ms-2">⚠ ${alertasCount} bajo stock</span>`;
+      }
+      document.getElementById('subtitleConteo').innerHTML = htmlSubtitle;
+      
+      if (!data.data || data.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Sin resultados</td></tr>';
+        document.getElementById('paginatorContainer').innerHTML = '';
+        return;
+      }
+      
+      const grupos = agrupar(data.data);
+      tbody.innerHTML = '';
+      
+      grupos.forEach((g, gi) => {
+        const cls   = nivelClase(g.stockTotal, g.stockMinimoTotal);
+        const bw    = barWidth(g.stockTotal, g.stockMinimoTotal);
+        const tieneMultiples = g.items.length > 1;
+        const subId = `sub-${gi}`;
+        const primerItem = g.items[0];
+
+        /* ── Fila principal ── */
+        const rowPrincipal = document.createElement('tr');
+        rowPrincipal.className = 'grupo-principal';
+        rowPrincipal.innerHTML = `
+          <td style="text-align:center;cursor:${tieneMultiples ? 'pointer' : 'default'};"
+              ${tieneMultiples ? `onclick="toggleSub('${subId}',this)"` : ''}>
+            ${tieneMultiples
+              ? `<i class="bi bi-chevron-right expand-icon" style="transition:transform .2s;font-size:13px;color:var(--text-muted);"></i>`
+              : `<i class="bi bi-dash" style="font-size:13px;color:var(--text-muted);"></i>`}
+          </td>
+          <td>
+            <div style="font-weight:600;">${escHtml(g.nombre)}</div>
+            ${g.sku ? `<div style="font-size:12px;color:var(--text-muted);font-family:monospace;">${escHtml(g.sku)}</div>` : ''}
+            <div style="font-size:11px;color:var(--text-muted);opacity:0.8;">
+              <i class="bi bi-building me-1"></i>${tieneMultiples ? 'Multi-bodega' : escHtml(primerItem.bodegaNombre || 'Sin bodega')}
+            </div>
+          </td>
+          <td class="d-none d-lg-table-cell">
+            ${g.categoria ? `<span class="badge bg-secondary">${escHtml(g.categoria)}</span>` : ''}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-${cls === 'success' ? 'check-circle-fill text-success' : cls === 'warning' ? 'exclamation-triangle-fill text-warning' : 'x-circle-fill text-danger'}"></i>
+              <div>
+                <strong>${g.stockTotal}</strong>
+                <div style="font-size:11px;color:var(--text-muted);">min: ${g.stockMinimoTotal}</div>
+              </div>
+              <div class="stock-bar">
+                <div class="fill bg-${cls}" style="width:${bw}%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="d-none d-lg-table-cell"><strong>$${(g.precioVenta||0).toLocaleString('es-CO',{minimumFractionDigits:2})}</strong></td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="/Inventario/Editar/${primerItem.id}" class="btn btn-sm btn-outline-secondary" title="Editar"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn btn-sm btn-outline-success" onclick="ajustarStock('${primerItem.id}','entrada')" title="Entrada de stock"><i class="bi bi-plus-lg"></i></button>
+              <button type="button" class="btn btn-sm btn-outline-warning" onclick="ajustarStock('${primerItem.id}','salida')"  title="Salida de stock"><i class="bi bi-dash-lg"></i></button>
+            </div>
+          </td>`;
+        tbody.appendChild(rowPrincipal);
+
+        /* ── Sub-tabla de bodegas (solo si >1 ítem) ── */
+        if (tieneMultiples) {
+          const rowSub = document.createElement('tr');
+          rowSub.id = subId;
+          rowSub.className = 'sub-bodegas';
+          rowSub.style.display = 'none';
+
+          const subHtml = g.items.map(item => {
+            const sc  = nivelClase(item.stock, item.stockMinimo);
+            const bw2 = barWidth(item.stock, item.stockMinimo);
+            return `<tr style="background:var(--surface2,#f8f9fa);">
+              <td colspan="2" style="padding-left:40px;font-size:13px;">
+                <i class="bi bi-building me-1" style="color:var(--text-muted);"></i>
+                ${escHtml(item.bodegaNombre || 'Sin bodega')}
+              </td>
+              <td style="font-size:13px;">
+                <div class="d-flex align-items-center gap-1">
+                  <strong>${item.stock}</strong>
+                  <div class="stock-bar" style="width:60px;">
+                    <div class="fill bg-${sc}" style="width:${bw2}%"></div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-size:12px;color:var(--text-muted);">mín: ${item.stockMinimo}</td>
+              <td>
+                <a href="/Inventario/Editar/${item.id}" class="btn btn-sm btn-outline-secondary btn-xs" title="Editar esta ubicación"><i class="bi bi-pencil" style="font-size:11px;"></i></a>
+              </td>
+              <td></td>
+            </tr>`;
+          }).join('');
+
+          rowSub.innerHTML = `<td colspan="6" style="padding:0;">
+            <table class="table-custom mb-0" style="border-top:2px solid var(--primary,#0066cc)20;">
+              <thead style="background:var(--surface2,#f5f5f7);">
+                <tr style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">
+                  <th colspan="2" style="padding:6px 6px 6px 40px;">Bodega</th>
+                  <th>Stock</th><th>Mínimo</th><th colspan="2">Acción</th>
+                </tr>
+              </thead>
+              <tbody>${subHtml}</tbody>
+            </table>
+          </td>`;
+          tbody.appendChild(rowSub);
+        }
+      });
+      
+      const pagHtml = renderSuraPagination(data.totalCount, currentInvPageSize, page, 'loadInventario');
+      document.getElementById('paginatorContainer').innerHTML = pagHtml;
+    })
+    .catch(err => {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-5">Error al cargar productos</td></tr>';
+    });
+}
+
+function toggleSub(subId, iconCell) {
+  const row  = document.getElementById(subId);
+  const icon = iconCell.querySelector('.expand-icon');
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  if (icon) icon.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function ajustarStock(id, tipo) {
+  Swal.fire({
+    title: tipo === 'entrada' ? 'Entrada de Stock' : 'Salida de Stock',
+    html: `<input type="number" id="cantInput" class="swal2-input" placeholder="Cantidad" min="1" value="1">`,
+    icon: tipo === 'entrada' ? 'success' : 'warning',
+    confirmButtonColor: tipo === 'entrada' ? '#2e7d32' : '#f9a825',
+    confirmButtonText: 'Confirmar',
+    cancelButtonText: 'Cancelar',
+    showCancelButton: true,
+    preConfirm: () => {
+      const v = parseInt(document.getElementById('cantInput').value);
+      if (!v || v <= 0) { Swal.showValidationMessage('Ingresa una cantidad válida'); return false; }
+      return v;
+    }
+  }).then(r => {
+    if (r.isConfirmed) {
+      document.getElementById('stockId').value = id;
+      document.getElementById('stockTipo').value = tipo;
+      document.getElementById('stockCantidad').value = r.value;
+      document.getElementById('formStock').submit();
+    }
+  });
+}
+
+// Call immediately to support dynamic navigations
+loadInventario(1);
+</script>
+}

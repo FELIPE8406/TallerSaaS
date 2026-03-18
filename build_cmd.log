@@ -1,0 +1,17 @@
+  Determinando los proyectos que se van a restaurar...
+  Todos los proyectos están actualizados para la restauración.
+  TallerSaaS.Domain -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.dll
+  TallerSaaS.Shared -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Shared\bin\Debug\net9.0\TallerSaaS.Shared.dll
+  TallerSaaS.Application -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\bin\Debug\net9.0\TallerSaaS.Application.dll
+  TallerSaaS.Infrastructure -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Infrastructure\bin\Debug\net9.0\TallerSaaS.Infrastructure.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Controllers\OrdenesController.cs(52,52): error CS1061: "VehiculoService" no contiene una definición para "GetAllAsync" ni un método de extensión accesible "GetAllAsync" que acepte un primer argumento del tipo "VehiculoService" (¿falta alguna directiva using o una referencia de ensamblado?) [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+
+ERROR al compilar.
+
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Controllers\OrdenesController.cs(52,52): error CS1061: "VehiculoService" no contiene una definición para "GetAllAsync" ni un método de extensión accesible "GetAllAsync" que acepte un primer argumento del tipo "VehiculoService" (¿falta alguna directiva using o una referencia de ensamblado?) [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+    0 Advertencia(s)
+    1 Errores
+
+Tiempo transcurrido 00:00:03.06
+
+Hay actualizaciones de carga de trabajo disponibles. Ejecute "dotnet workload list" para obtener más información.

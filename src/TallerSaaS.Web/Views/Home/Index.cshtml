@@ -1,0 +1,34 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="fw-bold" style="color: #1D1D1F;">Hola, @User.Identity?.Name</h1>
+        <p class="text-muted">Estado actual de tu taller en Colombia.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card card-apple p-4">
+                <span class="text-muted small fw-bold">ÓRDENES ACTIVAS</span>
+                <h2 class="fw-bold mt-2">12</h2>
+                <div class="text-primary small"><i class="bi bi-arrow-up"></i> 3 hoy</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-apple p-4">
+                <span class="text-muted small fw-bold">VEHÍCULOS EN TALLER</span>
+                <h2 class="fw-bold mt-2">8</h2>
+                <div class="text-success small">Capacidad 80%</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-apple p-4">
+                <span class="text-muted small fw-bold">INGRESOS MES (COP)</span>
+                <h2 class="fw-bold mt-2">$ 4.500.000</h2>
+                <div class="text-muted small">Facturación estimada</div>
+            </div>
+        </div>
+    </div>
+</div>

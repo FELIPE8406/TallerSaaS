@@ -1,0 +1,261 @@
+@{
+    ViewData["Title"] = "Reportes — Exportar Datos";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="page-title">📊 Exportar Reportes</h1>
+    <p class="text-muted mb-0">Exporta datos históricos en múltiples formatos con filtros de periodo</p>
+  </div>
+</div>
+
+@if (TempData["Exito"] != null)
+{
+  <div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle-fill me-2"></i>@TempData["Exito"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+}
+@if (TempData["Error"] != null)
+{
+  <div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-circle-fill me-2"></i>@TempData["Error"]
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+}
+
+@* Panel de filtro de periodo *@
+<div class="card glass-card mb-4">
+  <div class="card-body">
+    <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size:11px;letter-spacing:.06em;">
+      <i class="bi bi-calendar3 me-1"></i> Periodo de Exportación
+    </h6>
+    <div class="d-flex flex-wrap gap-2 mb-3" id="periodBtns">
+      <button type="button" class="btn btn-outline-primary btn-sm period-btn active"
+              data-period="trimestral">📅 Trimestral</button>
+      <button type="button" class="btn btn-outline-primary btn-sm period-btn"
+              data-period="semestral">📅 Semestral</button>
+      <button type="button" class="btn btn-outline-primary btn-sm period-btn"
+              data-period="anual">📅 Anual</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm period-btn"
+              data-period="personalizado" data-bs-toggle="collapse"
+              data-bs-target="#rangoPersonalizado">🗓️ Personalizado</button>
+    </div>
+
+    <div class="collapse" id="rangoPersonalizado">
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+          <label class="form-label fw-semibold" style="font-size:12px;">Desde</label>
+          <input type="date" id="fechaDesde" class="form-control form-control-sm" style="width:160px;" />
+        </div>
+        <div class="col-auto">
+          <label class="form-label fw-semibold" style="font-size:12px;">Hasta</label>
+          <input type="date" id="fechaHasta" class="form-control form-control-sm" style="width:160px;" />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* Tarjetas de reporte *@
+<div class="row g-4">
+
+  @* Órdenes *@
+  <div class="col-md-4">
+    <div class="card glass-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div style="width:44px;height:44px;background:linear-gradient(135deg,#007AFF,#5856D6);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-file-earmark-text text-white fs-5"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-0">Órdenes de Trabajo</h6>
+            <small class="text-muted">Historial de órdenes por periodo</small>
+          </div>
+        </div>
+        <div class="d-flex flex-column gap-2">
+          <a id="ordenes-excel" class="btn btn-sm btn-outline-success w-100 export-btn"
+             data-tipo="Ordenes" data-fmt="excel">
+            <i class="bi bi-file-earmark-excel me-1"></i> Excel (.xlsx)
+          </a>
+          <a id="ordenes-csv" class="btn btn-sm btn-outline-primary w-100 export-btn"
+             data-tipo="Ordenes" data-fmt="csv">
+            <i class="bi bi-filetype-csv me-1"></i> CSV
+          </a>
+          <a id="ordenes-txt" class="btn btn-sm btn-outline-secondary w-100 export-btn"
+             data-tipo="Ordenes" data-fmt="txt">
+            <i class="bi bi-file-text me-1"></i> TXT
+          </a>
+          <a id="ordenes-pdf" class="btn btn-sm btn-outline-danger w-100 export-btn"
+             data-tipo="Ordenes" data-fmt="pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i> PDF (vista previa)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @* Facturas *@
+  <div class="col-md-4">
+    <div class="card glass-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div style="width:44px;height:44px;background:linear-gradient(135deg,#34C759,#30D158);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-receipt text-white fs-5"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-0">Facturas</h6>
+            <small class="text-muted">Facturación consolidada del periodo</small>
+          </div>
+        </div>
+        <div class="d-flex flex-column gap-2">
+          <a id="facturas-excel" class="btn btn-sm btn-outline-success w-100 export-btn"
+             data-tipo="Facturas" data-fmt="excel">
+            <i class="bi bi-file-earmark-excel me-1"></i> Excel (.xlsx)
+          </a>
+          <a id="facturas-csv" class="btn btn-sm btn-outline-primary w-100 export-btn"
+             data-tipo="Facturas" data-fmt="csv">
+            <i class="bi bi-filetype-csv me-1"></i> CSV
+          </a>
+          <a id="facturas-txt" class="btn btn-sm btn-outline-secondary w-100 export-btn"
+             data-tipo="Facturas" data-fmt="txt">
+            <i class="bi bi-file-text me-1"></i> TXT
+          </a>
+          <a id="facturas-pdf" class="btn btn-sm btn-outline-danger w-100 export-btn"
+             data-tipo="Facturas" data-fmt="pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i> PDF (vista previa)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @* Clientes y Vehículos *@
+  <div class="col-md-4">
+    <div class="card glass-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div style="width:44px;height:44px;background:linear-gradient(135deg,#FF9F0A,#FF6B00);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-people text-white fs-5"></i>
+          </div>
+          <div>
+            <h6 class="fw-bold mb-0">Clientes y Vehículos</h6>
+            <small class="text-muted">Relación completa por periodo</small>
+          </div>
+        </div>
+        <div class="d-flex flex-column gap-2">
+          <a id="clientes-excel" class="btn btn-sm btn-outline-success w-100 export-btn"
+             data-tipo="ClientesVehiculos" data-fmt="excel">
+            <i class="bi bi-file-earmark-excel me-1"></i> Excel (.xlsx)
+          </a>
+          <a id="clientes-csv" class="btn btn-sm btn-outline-primary w-100 export-btn"
+             data-tipo="ClientesVehiculos" data-fmt="csv">
+            <i class="bi bi-filetype-csv me-1"></i> CSV
+          </a>
+          <a id="clientes-txt" class="btn btn-sm btn-outline-secondary w-100 export-btn"
+             data-tipo="ClientesVehiculos" data-fmt="txt">
+            <i class="bi bi-file-text me-1"></i> TXT
+          </a>
+          <a id="clientes-pdf" class="btn btn-sm btn-outline-danger w-100 export-btn"
+             data-tipo="ClientesVehiculos" data-fmt="pdf">
+            <i class="bi bi-file-earmark-pdf me-1"></i> PDF (vista previa)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+@section Scripts {
+<script>
+(function () {
+  // ── Helpers de URL ────────────────────────────────────────────────────────
+  function buildUrl(tipo, fmt, period, desde, hasta) {
+    const actionMap = {
+      Ordenes:           '/Reportes/ExportarOrdenes',
+      Facturas:          '/Reportes/ExportarFacturas',
+      ClientesVehiculos: '/Reportes/ExportarClientesVehiculos'
+    };
+    let url = `${actionMap[tipo]}?formato=${fmt}&periodo=${period}`;
+    if (period === 'personalizado') {
+      if (desde) url += `&desde=${desde}`;
+      if (hasta) url += `&hasta=${hasta}`;
+    }
+    return url;
+  }
+
+  function updateLinks() {
+    const activePeriod = document.querySelector('.period-btn.active')?.dataset.period ?? 'trimestral';
+    const desde = document.getElementById('fechaDesde')?.value ?? '';
+    const hasta  = document.getElementById('fechaHasta')?.value ?? '';
+
+    document.querySelectorAll('.export-btn').forEach(btn => {
+      const url = buildUrl(btn.dataset.tipo, btn.dataset.fmt, activePeriod, desde, hasta);
+
+      if (btn.dataset.fmt === 'excel' || btn.dataset.fmt === 'pdf') {
+        // Excel & PDF: no usamos href directo para evitar descarga automática.
+        // Guardamos la URL en data-url; el click handler la abrirá en pestaña nueva.
+        btn.removeAttribute('href');
+        btn.dataset.url = url;
+        btn.style.cursor = 'pointer';
+      } else {
+        // CSV / TXT: descarga directa mediante anchor estándar
+        btn.href = url;
+        btn.removeAttribute('data-url');
+      }
+    });
+  }
+
+  // ── Click: Excel y PDF abren en pestaña nueva (inline viewer) ──────────
+  // Se usa delegación de eventos para capturar botones Excel/PDF aunque se regeneren.
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.export-btn[data-fmt="excel"],.export-btn[data-fmt="pdf"]');
+    if (!btn) return;
+    e.preventDefault();
+
+    const activePeriod = document.querySelector('.period-btn.active')?.dataset.period ?? 'trimestral';
+    // Validación: periodo personalizado requiere ambas fechas
+    if (activePeriod === 'personalizado') {
+      const desde = document.getElementById('fechaDesde')?.value ?? '';
+      const hasta  = document.getElementById('fechaHasta')?.value ?? '';
+      if (!desde || !hasta) {
+        alert('⚠️ Por favor selecciona las fechas "Desde" y "Hasta" antes de exportar.');
+        return;
+      }
+    }
+
+    const url = btn.dataset.url;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  });
+
+  // ── Cambio de periodo ─────────────────────────────────────────────────────
+  document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateLinks();
+    });
+  });
+
+  // ── Cambio de fechas personalizadas ───────────────────────────────────────
+  ['fechaDesde', 'fechaHasta'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', updateLinks);
+  });
+
+  // ── Valores por defecto de fechas ─────────────────────────────────────────
+  function initDates() {
+    const now = new Date();
+    const fmt = d => d.toISOString().slice(0, 10);
+    const hoy = fmt(now);
+    const hace3m = fmt(new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()));
+    const el = id => document.getElementById(id);
+    if (el('fechaDesde')) el('fechaDesde').value = hace3m;
+    if (el('fechaHasta')) el('fechaHasta').value = hoy;
+  }
+
+  initDates();
+  updateLinks();
+})();
+</script>
+}

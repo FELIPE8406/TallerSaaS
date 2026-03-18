@@ -1,0 +1,135 @@
+@{ ViewData["Title"] = "Ordenes de Trabajo"; }
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-file-earmark-text-fill me-2" style="color:var(--primary);"></i>Ordenes</h1>
+    <p class="page-subtitle" id="subtitleConteo">Cargando...</p>
+  </div>
+  <a asp-action="Crear" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nueva Orden</a>
+</div>
+
+<!-- Estado Filter -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <input type="hidden" id="estadoFiltro" value="@ViewBag.EstadoFiltro" />
+  <button type="button" onclick="setEstadoFiltro('');" class="btn btn-sm btn-filter" id="btnFiltro_" >Todas</button>
+  <button type="button" onclick="setEstadoFiltro('1');" class="btn btn-sm btn-filter" id="btnFiltro_1"><i class="bi bi-inbox me-1"></i>Recibidas</button>
+  <button type="button" onclick="setEstadoFiltro('2');" class="btn btn-sm btn-filter" id="btnFiltro_2"><i class="bi bi-wrench me-1"></i>En Reparacion</button>
+  <button type="button" onclick="setEstadoFiltro('3');" class="btn btn-sm btn-filter" id="btnFiltro_3"><i class="bi bi-check-circle me-1"></i>Terminadas</button>
+  <button type="button" onclick="setEstadoFiltro('4');" class="btn btn-sm btn-filter" id="btnFiltro_4"><i class="bi bi-check2-all me-1"></i>Entregadas</button>
+</div>
+
+<div class="card-custom">
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>No. Orden</th>
+          <th>Cliente / Vehiculo</th>
+          <th class="d-none d-md-table-cell">Fecha</th>
+          <th>Estado</th>
+          <th class="d-none d-lg-table-cell">Total</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyOrdenes">
+        <tr><td colspan="6" class="text-center py-5 text-muted">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="paginatorContainer"></div>
+</div>
+
+@section Scripts {
+<script>
+let currentOrdenesPageSize = 10;
+
+function setEstadoFiltro(val) {
+    document.getElementById('estadoFiltro').value = val;
+    
+    // Update active button styles
+    document.querySelectorAll('.btn-filter').forEach(b => {
+        b.classList.remove('btn-primary', 'btn-warning', 'btn-success', 'btn-secondary');
+        b.classList.add('btn-outline-secondary');
+        b.style.color = '';
+    });
+    
+    const activeBtn = document.getElementById('btnFiltro_' + val);
+    if(activeBtn) {
+        activeBtn.classList.remove('btn-outline-secondary');
+        if(val === '1') activeBtn.classList.add('btn-primary');
+        else if(val === '2') { activeBtn.classList.add('btn-warning'); activeBtn.style.color = 'white'; }
+        else if(val === '3') activeBtn.classList.add('btn-success');
+        else if(val === '4') activeBtn.classList.add('btn-secondary');
+        else activeBtn.classList.add('btn-primary');
+    }
+    loadOrdenes(1);
+}
+
+function loadOrdenes(page = 1, pageSize = null) {
+    if (pageSize) currentOrdenesPageSize = pageSize;
+    
+    const estado = document.getElementById('estadoFiltro').value;
+    const tbody = document.getElementById('tbodyOrdenes');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Cargando...</td></tr>';
+    
+    let url = `/Ordenes/GetPaged?page=${page}&size=${currentOrdenesPageSize}`;
+    if (estado) url += `&estado=${estado}`;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('subtitleConteo').innerText = `${data.totalCount} ordenes en total`;
+
+            if (!data.data || data.data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5" style="color:var(--text-muted);">
+                  <i class="bi bi-file-earmark-text" style="font-size:48px;opacity:.3;display:block;margin-bottom:12px;"></i>
+                  No hay ordenes con este filtro.
+                </td></tr>`;
+                document.getElementById('paginatorContainer').innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            data.data.forEach(o => {
+                const fecha = new Date(o.fechaEntrada).toLocaleDateString('es-CO', {day:'2-digit', month:'2-digit', year:'2-digit'});
+                const total = o.total ? o.total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) : '0.00';
+                
+                html += `<tr>
+                  <td><strong style="color:var(--primary);">${o.numeroOrden || ''}</strong></td>
+                  <td>
+                    <div style="font-weight:600;font-size:14px;">${o.clienteNombre || '—'}</div>
+                    <div style="font-size:12px;color:var(--text-muted);">${o.vehiculoDescripcion || '—'}</div>
+                  </td>
+                  <td class="d-none d-md-table-cell" style="color:var(--text-muted);">${fecha}</td>
+                  <td>
+                    <span class="estado-badge ${o.estadoClase || 'bg-secondary'}">${o.estadoTexto || ''}</span>
+                  </td>
+                  <td class="d-none d-lg-table-cell"><strong>$${total}</strong></td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <a href="/Ordenes/Detalle/${o.id}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                      <a href="/Reportes/FacturaPdf?ordenId=${o.id}" class="btn btn-sm btn-outline-secondary" title="Descargar PDF">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+
+            const pagHtml = renderSuraPagination(data.totalCount, currentOrdenesPageSize, page, 'loadOrdenes');
+            document.getElementById('paginatorContainer').innerHTML = pagHtml;
+        })
+        .catch(err => {
+            console.error(err);
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Error al cargar.</td></tr>';
+        });
+}
+
+// Initial paint
+const currentEstado = document.getElementById('estadoFiltro').value;
+setEstadoFiltro(currentEstado);
+</script>
+}

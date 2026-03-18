@@ -1,0 +1,206 @@
+@model List<TallerSaaS.Application.DTOs.OrdenDto>
+@{
+    ViewData["Title"] = "Nueva Factura";
+}
+
+<div class="page-header mb-4">
+    <h1 class="page-title">🧾 Nueva Factura</h1>
+    <p class="text-muted">Selecciona las órdenes terminadas para incluir en esta factura.</p>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-warning">
+        <strong>Sin órdenes disponibles.</strong>
+        No hay órdenes en estado <em>Terminado</em> pendientes de facturar.
+        <a asp-controller="Ordenes" asp-action="Index" class="alert-link ms-2">Ver Órdenes</a>
+    </div>
+}
+else
+{
+    <form asp-action="Nueva" method="post" id="formNuevaFactura">
+        @Html.AntiForgeryToken()
+
+        @* Campo oculto que se rellena al confirmar el tipo de facturación en el modal *@
+        <input type="hidden" name="tipoFacturacion" id="tipoFacturacion" value="" />
+
+        <div class="card glass-card mb-4">
+            <div class="card-header">
+                <span class="fw-bold">Órdenes elegibles (Estado: Terminado)</span>
+                <small class="text-muted ms-2">Selecciona una o más órdenes para agrupar en la factura</small>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" id="selectAll" class="form-check-input"
+                                       title="Seleccionar todo">
+                            </th>
+                            <th>No. Orden</th>
+                            <th>Cliente</th>
+                            <th>Vehículo</th>
+                            <th>Fecha Entrada</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in Model)
+                        {
+                            <tr class="orden-row" data-total="@o.Total">
+                                <td>
+                                    <input type="checkbox" name="ordenIds" value="@o.Id"
+                                           class="form-check-input orden-check"
+                                           onchange="actualizarTotal()">
+                                </td>
+                                <td><span class="fw-bold text-primary">@o.NumeroOrden</span></td>
+                                <td>@o.ClienteNombre</td>
+                                <td><small>@o.VehiculoDescripcion</small></td>
+                                <td><small class="text-muted">@o.FechaEntrada.ToString("dd/MM/yyyy")</small></td>
+                                <td class="text-end fw-bold">$@o.Total.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card glass-card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="mb-0">Total a Facturar:
+                            <span id="totalFactura" class="text-primary fw-bold">$0</span>
+                        </h5>
+                        <small class="text-muted" id="ordenesSeleccionadas">0 órdenes seleccionadas</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <a asp-action="Index" class="btn btn-outline-secondary me-2">Cancelar</a>
+                        @* Este botón ABRE el modal de selección de tipo; NO envía el form directamente *@
+                        <button type="button" class="btn btn-primary" id="btnAbrirModalFacturacion" disabled
+                                data-bs-toggle="modal" data-bs-target="#modalTipoFacturacion">
+                            🧾 Generar Factura
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     Modal de selección de Tipo de Facturación
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalTipoFacturacion" tabindex="-1"
+     aria-labelledby="modalTipoFacturacionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.15);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalTipoFacturacionLabel">
+                    <i class="bi bi-receipt me-2 text-primary"></i>Tipo de Facturación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body pt-2 pb-4 px-4">
+                <p class="text-muted mb-4" style="font-size:14px;">
+                    ¿Desea realizar <strong>Facturación Electrónica</strong> ante la DIAN?
+                </p>
+
+                <div class="d-grid gap-3">
+                    <!-- Opción A: Factura Interna (No Electrónica) -->
+                    <button type="button" id="btnNoElectronica"
+                            class="btn text-start p-3"
+                            style="border:2px solid var(--bs-border-color);border-radius:12px;transition:all .2s;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width:44px;height:44px;border-radius:10px;background:#e3f2fd;
+                                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="bi bi-file-earmark-text" style="font-size:22px;color:#1a73e8;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold" style="font-size:15px;">No — Factura Interna</div>
+                                <div class="text-muted" style="font-size:12px;">
+                                    Documento interno del sistema. Cierra el saldo de la orden de inmediato
+                                    y permite marcarla como Entregada.
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Opción B: Facturación Electrónica (Fase de Transición) -->
+                    <button type="button" id="btnElectronica"
+                            class="btn text-start p-3"
+                            style="border:2px solid var(--bs-border-color);border-radius:12px;transition:all .2s;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width:44px;height:44px;border-radius:10px;background:#fff3e0;
+                                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="bi bi-cloud-upload" style="font-size:22px;color:#e65100;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold" style="font-size:15px;">
+                                    Sí — Facturación Electrónica (DIAN)
+                                    <span class="badge bg-warning text-dark ms-1" style="font-size:10px;">En transición</span>
+                                </div>
+                                <div class="text-muted" style="font-size:12px;">
+                                    Registra la factura electrónica y <strong>cierra el ciclo de entrega</strong>
+                                    de la orden de inmediato.
+                                    El documento quedará como <em>Pendiente de Envío a la DIAN</em> hasta que
+                                    la integración esté activa — use el botón
+                                    <strong>"Enviar a DIAN"</strong> desde el detalle de la factura.
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── Selección de órdenes ───────────────────────────────────────────────────
+    document.getElementById('selectAll')?.addEventListener('change', function () {
+        document.querySelectorAll('.orden-check').forEach(c => c.checked = this.checked);
+        actualizarTotal();
+    });
+
+    function actualizarTotal() {
+        const checks = document.querySelectorAll('.orden-check:checked');
+        let total = 0;
+        checks.forEach(c => {
+            const row = c.closest('tr');
+            total += parseFloat(row.dataset.total || '0');
+        });
+        const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+        document.getElementById('totalFactura').textContent = fmt.format(total);
+        document.getElementById('ordenesSeleccionadas').textContent =
+            `${checks.length} orden${checks.length !== 1 ? 'es' : ''} seleccionada${checks.length !== 1 ? 's' : ''}`;
+        document.getElementById('btnAbrirModalFacturacion').disabled = checks.length === 0;
+    }
+
+    // ── Hover visual sobre opciones del modal ────────────────────────────────
+    ['btnNoElectronica', 'btnElectronica'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('mouseenter', () => el.style.borderColor = '#1a73e8');
+        el.addEventListener('mouseleave', () => el.style.borderColor = 'var(--bs-border-color)');
+    });
+
+    // ── Confirmar tipo y enviar el formulario ─────────────────────────────────
+    document.getElementById('btnNoElectronica')?.addEventListener('click', function () {
+        confirmarYEnviar('NoElectronica');
+    });
+
+    document.getElementById('btnElectronica')?.addEventListener('click', function () {
+        confirmarYEnviar('Electronica');
+    });
+
+    function confirmarYEnviar(tipo) {
+        document.getElementById('tipoFacturacion').value = tipo;
+        // Cerrar el modal y enviar el form
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalTipoFacturacion'));
+        modal?.hide();
+        document.getElementById('formNuevaFactura').submit();
+    }
+</script>
+}

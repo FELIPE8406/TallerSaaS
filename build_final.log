@@ -1,0 +1,15 @@
+  Determinando los proyectos que se van a restaurar...
+  Todos los proyectos están actualizados para la restauración.
+  TallerSaaS.Domain -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.dll
+  TallerSaaS.Shared -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Shared\bin\Debug\net9.0\TallerSaaS.Shared.dll
+  TallerSaaS.Application -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\bin\Debug\net9.0\TallerSaaS.Application.dll
+  TallerSaaS.Infrastructure -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Infrastructure\bin\Debug\net9.0\TallerSaaS.Infrastructure.dll
+  TallerSaaS.Web -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\bin\Debug\net9.0\TallerSaaS.Web.dll
+
+Compilación correcta.
+    0 Advertencia(s)
+    0 Errores
+
+Tiempo transcurrido 00:00:03.66
+
+Hay actualizaciones de carga de trabajo disponibles. Ejecute "dotnet workload list" para obtener más información.

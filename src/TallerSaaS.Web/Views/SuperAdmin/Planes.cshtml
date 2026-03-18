@@ -1,0 +1,192 @@
+﻿@using TallerSaaS.Domain.Entities
+@model IEnumerable<PlanSuscripcion>
+@{
+    ViewData["Title"] = "Planes de Suscripción";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="h3 fw-bold text-light mb-1">Planes de Suscripción</h1>
+            <p class="text-muted">Gestiona las ofertas mensuales para los talleres en Colombia.</p>
+        </div>
+        <button class="btn btn-primary px-4 shadow-sm" style="border-radius: 10px;" data-bs-toggle="modal" data-bs-target="#modalNuevoPlan">
+            <i class="bi bi-plus-lg me-2"></i>Crear Nuevo Plan
+        </button>
+    </div>
+
+    <div class="row g-4 d-flex align-items-stretch">
+        @foreach (var plan in Model)
+        {
+            <div class="col-md-4">
+                <div class="card h-100 sa-plan-card border-0 shadow-sm" 
+                     style="border-radius: 20px; border: 1px solid #3A3A3C !important; background: #1C1C1E; transition: transform 0.3s ease, border-color 0.3s ease;">
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-4">
+                            <div>
+                                <span class="badge px-3 py-2 mb-2" 
+                                      style="border-radius: 8px; background: @(plan.ColorHex ?? "#0066CC")20; color: @(plan.ColorHex ?? "#0066CC");">
+                                    @(plan.Nombre.Contains("Básico") ? "Esencial" : plan.Nombre.Contains("Pro") ? "Crecimiento" : "Total")
+                                </span>
+                                <h4 class="fw-bold text-light">@plan.Nombre</h4>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="border-radius:12px; font-size:13px; border-color:#3A3A3C;">
+                                    <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="openEditModal(@plan.Id)"><i class="bi bi-pencil me-2"></i>Editar</a></li>
+                                    <li><hr class="dropdown-divider border-secondary"></li>
+                                    <li><a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="confirmDelete(@plan.Id, '@plan.Nombre')"><i class="bi bi-trash me-2"></i>Eliminar</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <h2 class="fw-bold text-light mb-4">$@plan.Precio.ToString("N0")<span class="fs-6 fw-normal text-muted"> /mes</span></h2>
+                        
+                        <ul class="list-unstyled mb-5 flex-grow-1">
+                            @if (!string.IsNullOrEmpty(plan.Beneficios))
+                            {
+                                foreach (var b in plan.Beneficios.Split(','))
+                                {
+                                    <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#0066CC");"></i> @b.Trim()</li>
+                                }
+                            }
+                            else
+                            {
+                                <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#0066CC");"></i> Hasta @plan.LimiteUsuarios mecánicos</li>
+                                <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#0066CC");"></i> Órdenes de Servicio ilimitadas</li>
+                            }
+                        </ul>
+                        
+                        <button class="btn btn-outline-light w-100 py-2" 
+                                style="border-radius: 12px; border-color: #3A3A3C; font-weight: 600;"
+                                onclick="openEditModal(@plan.Id)">
+                            Gestionar Plan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Plan (Crea / Edita) -->
+<div class="modal fade" id="modalPlan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light border-secondary shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-secondary p-4">
+                <h5 class="modal-title fw-bold" id="modalTitle">Nuevo Plan de Suscripción</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="planForm" method="post" asp-action="CrearPlan">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="planId" value="0" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Nombre del Plan</label>
+                        <input type="text" name="Nombre" id="planNombre" class="form-control bg-dark text-light border-secondary" style="border-radius:10px;" placeholder="Ej: Plan Premium" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted">Precio (COP)</label>
+                            <input type="number" name="Precio" id="planPrecio" class="form-control bg-dark text-light border-secondary" style="border-radius:10px;" placeholder="89900" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted">Mecánicos</label>
+                            <input type="number" name="LimiteUsuarios" id="planLimiteUsuarios" class="form-control bg-dark text-light border-secondary" style="border-radius:10px;" value="5" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Beneficios (separados por coma)</label>
+                        <textarea name="Beneficios" id="planBeneficios" class="form-control bg-dark text-light border-secondary" style="border-radius:10px;" rows="3" placeholder="Soporte 24/7, Reportes VIP, Multi-sede"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Color UI (Hex)</label>
+                        <input type="color" name="ColorHex" id="planColorHex" class="form-control form-control-color bg-dark border-secondary w-100" style="border-radius:10px;height:45px;" value="#0066CC">
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary p-4">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold" style="border-radius: 12px;">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Form oculto para eliminación -->
+<form id="deleteForm" method="post" asp-action="EliminarPlan" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
+@section Scripts {
+    <script>
+        const planModal = new bootstrap.Modal(document.getElementById('modalPlan'));
+
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = "Nuevo Plan de Suscripción";
+            document.getElementById('planForm').setAttribute('action', '@Url.Action("CrearPlan")');
+            document.getElementById('planId').value = "0";
+            document.getElementById('planNombre').value = "";
+            document.getElementById('planPrecio').value = "";
+            document.getElementById('planLimiteUsuarios').value = "5";
+            document.getElementById('planBeneficios').value = "";
+            document.getElementById('planColorHex').value = "#0066CC";
+            planModal.show();
+        }
+
+        async function openEditModal(id) {
+            try {
+                const response = await fetch(`@Url.Action("GetPlan")?id=${id}`);
+                if (!response.ok) throw new Error("Error al obtener datos");
+                
+                const plan = await response.json();
+                
+                document.getElementById('modalTitle').textContent = "Editar Plan de Suscripción";
+                document.getElementById('planForm').setAttribute('action', '@Url.Action("EditarPlan")');
+                document.getElementById('planId').value = plan.id;
+                document.getElementById('planNombre').value = plan.nombre;
+                document.getElementById('planPrecio').value = plan.precio;
+                document.getElementById('planLimiteUsuarios').value = plan.limiteUsuarios;
+                document.getElementById('planBeneficios').value = plan.beneficios || "";
+                document.getElementById('planColorHex').value = plan.colorHex || "#0066CC";
+                
+                planModal.show();
+            } catch (error) {
+                console.error(error);
+                Swal.fire("Error", "No se pudo cargar la información del plan", "error");
+            }
+        }
+
+        function confirmDelete(id, nombre) {
+            Swal.fire({
+                title: '¿Eliminar plan?',
+                text: `Estás a punto de eliminar el plan "${nombre}". Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#FF3B30',
+                cancelButtonColor: '#3A3A3C',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                background: '#1C1C1E',
+                color: '#fff'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('deleteId').value = id;
+                    document.getElementById('deleteForm').submit();
+                }
+            });
+        }
+    </script>
+}
+
+<style>
+    .sa-plan-card:hover {
+        transform: translateY(-8px);
+        border-color: #0066CC !important;
+        box-shadow: 0 12px 40px rgba(0, 102, 204, 0.2) !important;
+    }
+    .dropdown-item:hover { background-color: rgba(255,255,255,0.05); }
+</style>

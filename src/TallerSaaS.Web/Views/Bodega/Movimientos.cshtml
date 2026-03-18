@@ -1,0 +1,132 @@
+@{
+    ViewData["Title"] = "Movimientos de Inventario";
+    var bodegas = ViewBag.Bodegas as List<TallerSaaS.Application.DTOs.BodegaDto> ?? new();
+    var bodegaId = ViewBag.BodegaId as Guid?;
+}
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="page-title">🔄 Movimientos de Inventario</h1>
+    <p class="text-muted mb-0">Historial de entradas, salidas y traslados</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a asp-action="Traslado" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-arrow-left-right me-1"></i> Nuevo Traslado
+    </a>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">← Bodegas</a>
+  </div>
+</div>
+
+@* Filtro por bodega *@
+<div class="card glass-card mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <label class="fw-semibold mb-0" style="font-size:13px;">Filtrar por bodega:</label>
+      <select id="filtroBodega" class="form-select form-select-sm" style="width:220px;" onchange="loadMovimientos(1)">
+        <option value="">— Todas las bodegas —</option>
+        @foreach (var b in bodegas)
+        {         
+          <option value="@b.Id" selected="@(bodegaId == b.Id)">@b.Nombre</option>
+        }
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="card glass-card">
+  <div class="card-body p-0">
+      <table class="table table-hover align-middle mb-0" style="font-size:13px;">
+        <thead class="table-dark">
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Producto</th>
+            <th class="text-center">Cantidad</th>
+            <th>Origen</th>
+            <th>Destino</th>
+            <th>Referencia</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyMovimientos">
+          <tr><td colspan="7" class="text-center py-5 text-muted">Cargando movimientos...</td></tr>
+        </tbody>
+      </table>
+  </div>
+</div>
+
+<!-- Contenedor Sura Paginator -->
+<div id="paginatorContainer" class="mt-4"></div>
+
+@section Scripts {
+<script>
+    let currentMovimientosPageSize = 10;
+
+    function loadMovimientos(page = 1, pageSize = null) {
+        if (pageSize) currentMovimientosPageSize = pageSize;
+        
+        const bodegaId = document.getElementById('filtroBodega').value;
+        const tbody = document.getElementById('tbodyMovimientos');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted">Cargando movimientos...</td></tr>';
+        
+        let url = `/Bodega/GetMovimientosPaged?page=${page}&size=${currentMovimientosPageSize}`;
+        if (bodegaId) {
+            url += `&bodegaId=${bodegaId}`;
+        }
+        
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.data || data.data.length === 0) {
+                    tbody.innerHTML = `
+                      <tr><td colspan="7" class="text-center py-5 text-muted">
+                        <div style="font-size:3rem">🔄</div>
+                        <p class="mt-2">No hay movimientos registrados.</p>
+                      </td></tr>`;
+                    document.getElementById('paginatorContainer').innerHTML = '';
+                    return;
+                }
+                
+                tbody.innerHTML = '';
+                data.data.forEach(m => {
+                    let icon, cls;
+                    switch(m.tipo) {
+                      case 'Entrada':       icon = '⬇️'; cls = 'success'; break;
+                      case 'AjusteEntrada': icon = '➕'; cls = 'success'; break;
+                      case 'Salida':        icon = '⬆️'; cls = 'danger'; break;
+                      case 'AjusteSalida':  icon = '➖'; cls = 'danger'; break;
+                      case 'Traslado':      icon = '🔄'; cls = 'warning'; break;
+                      default:              icon = '•';  cls = 'secondary'; break;
+                    }
+                    
+                    const fecha = new Date(m.fecha).toLocaleString('es-CO', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', 
+                        hour: '2-digit', minute:'2-digit'
+                    });
+                    
+                    const tbodyHtml = `
+                      <td><small class="text-muted">${fecha}</small></td>
+                      <td><span class="badge bg-${cls}">${icon} ${m.tipo}</span></td>
+                      <td class="fw-semibold">${m.productoNombre || '—'}</td>
+                      <td class="text-center fw-bold">${m.cantidad}</td>
+                      <td><small>${m.bodegaOrigen || '—'}</small></td>
+                      <td><small>${m.bodegaDestino || '—'}</small></td>
+                      <td><small class="text-muted">${m.referencia || m.observaciones || '—'}</small></td>
+                    `;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = tbodyHtml;
+                    tbody.appendChild(tr);
+                });
+                
+                const pagHtml = renderSuraPagination(data.totalCount, currentMovimientosPageSize, page, 'loadMovimientos');
+                document.getElementById('paginatorContainer').innerHTML = pagHtml;
+            })
+            .catch(err => {
+                console.error('Error loading movimientos:', err);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Error al cargar datos.</td></tr>';
+            });
+    }
+    
+    // Call immediately to support dynamic navigations
+    loadMovimientos(1);
+</script>
+}

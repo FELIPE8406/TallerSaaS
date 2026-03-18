@@ -1,0 +1,74 @@
+@model List<TallerSaaS.Domain.Entities.MechanicAvailability>
+@{
+    var user = ViewBag.User as TallerSaaS.Infrastructure.Data.ApplicationUser;
+    ViewData["Title"] = "Horario de " + user?.NombreCompleto;
+    string[] dias = { "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado" };
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="text-white mb-0">Jornada Laboral: @user?.NombreCompleto</h5>
+                    <a asp-action="Index" class="btn btn-sm btn-outline-light">Volver</a>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-4">Define los días y horas en los que este mecánico puede recibir citas en la agenda.</p>
+                    
+                    <form asp-action="Disponibilidad" method="post">
+                        <input type="hidden" name="mechanicId" value="@user?.Id" />
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 150px;">Día</th>
+                                        <th style="width: 100px;">Activo</th>
+                                        <th>Hora Inicio</th>
+                                        <th>Hora Fin</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < 7; i++)
+                                    {
+                                        var current = Model.FirstOrDefault(a => a.DayOfWeek == i);
+                                        var isActive = current?.IsActive ?? false;
+                                        <tr>
+                                            <td class="fw-bold">@dias[i]</td>
+                                            <td>
+                                                <div class="form-check form-switch">
+                                                    <input type="hidden" name="items[@i].DayOfWeek" value="@i" />
+                                                    <input class="form-check-input" type="checkbox" name="items[@i].IsActive" value="true" @(isActive ? "checked" : "") />
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input type="time" name="items[@i].StartTime" class="form-control form-control-sm" 
+                                                       value="@(current?.StartTime.ToString(@"hh\:mm") ?? "08:00")" />
+                                            </td>
+                                            <td>
+                                                <input type="time" name="items[@i].EndTime" class="form-control form-control-sm" 
+                                                       value="@(current?.EndTime.ToString(@"hh\:mm") ?? "18:00")" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                                <i class="bi bi-save me-2"></i>Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-switch .form-check-input { width: 2.5em; height: 1.25em; cursor: pointer; }
+    .table th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+</style>
