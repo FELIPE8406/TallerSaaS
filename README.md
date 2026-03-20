@@ -19,6 +19,13 @@
 
 ---
 
+## 📖 Documentación
+
+Para una visión profunda de la arquitectura y lógica del negocio, consulta:
+- **[Documentación Integral](docs/DocumentacionIntegral.md):** Arquitectura multi-tenant, diccionario de módulos y lógica contable detallada.
+
+---
+
 ## 🛠️ Stack Tecnológico
 
 | Capa | Tecnología | Versión |
@@ -108,7 +115,19 @@ El módulo de reportes usa el **Strategy Pattern** (`IExportStrategy`) para gene
 
 - Filtros por periodo: **Trimestral, Semestral, Anual, Personalizado**.
 - Excel se sirve como `Content-Disposition: inline` → apertura en nueva pestaña sin descarga forzada.
+- Excel se sirve como `Content-Disposition: inline` → apertura en nueva pestaña sin descarga forzada.
 - Zona horaria correcta UTC-5 (Colombia) en todos los filtros de fecha.
+
+### 💰 Contabilidad y Tributación (Normativa Colombia)
+- Automatización de asientos contables en el **PUC** al facturar.
+- Manejo de **IVA (19%)** y retenciones (Fuente e ICA).
+- Diferenciación de ingresos por servicios vs. repuestos.
+- Registro de Costo de Ventas (COGS) sincronizado con inventario.
+
+### 📅 Agenda y Citas
+- Programación de servicios y asignación de mecánicos.
+- Gestión de disponibilidad por bahía y horario laboral.
+- Prevención de cruces de horarios (Double-booking).
 
 ### 🔐 Autenticación y Roles
 | Rol | Acceso |
@@ -207,6 +226,8 @@ dotnet publish src/TallerSaaS.Web -c Release -o ./publish
 | Facturas | `GET/POST /Facturas` | Admin, SuperAdmin |
 | Inventario | `GET/POST /Inventario` | Admin, SuperAdmin |
 | Bodega | `GET/POST /Bodega` | Admin, SuperAdmin |
+| Contabilidad | `GET /Contabilidad` | Admin (Premium), SuperAdmin |
+| Agenda | `GET /Agenda` | Admin, Mecánico, SuperAdmin |
 | Trazabilidad | `GET /Trazabilidad` | Admin, SuperAdmin |
 
 ### Módulo de Reportes
