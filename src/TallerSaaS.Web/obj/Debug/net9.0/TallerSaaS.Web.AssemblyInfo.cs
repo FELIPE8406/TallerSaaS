@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TallerSaaS.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+53582a7be270d0ec7441b004fb315c3101af86fc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+72047281367d3e93fae3b8f2998e854bc474d223")]
 [assembly: System.Reflection.AssemblyProductAttribute("TallerSaaS.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TallerSaaS.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

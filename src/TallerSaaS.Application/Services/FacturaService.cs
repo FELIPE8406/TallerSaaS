@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TallerSaaS.Application.DTOs;
+using TallerSaaS.Application.Extensions;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
 using TallerSaaS.Domain.Enums;
@@ -138,6 +139,46 @@ public class FacturaService
             .ToListAsync();
 
         return facturas.Select(MapToDto).ToList();
+    }
+
+    /// <summary>
+    /// Returns a paginated page of facturas (newest first).
+    /// Does NOT modify or replace existing methods.
+    /// </summary>
+    public async Task<PagedResult<FacturaDto>> GetPagedAsync(int pageNumber, int pageSize)
+    {
+        var paged = await _db.Facturas.AsNoTracking()
+            .OrderByDescending(f => f.FechaEmision)
+            .Select(f => new
+            {
+                f.Id, f.NumeroFactura, f.FechaEmision, f.Subtotal, f.Descuento, f.IVA, f.Total, f.Observaciones,
+                f.TipoFacturacion, f.EstadoEnvio,
+                Ordenes = f.Ordenes.Select(o => new 
+                {
+                    o.Id, o.NumeroOrden, o.Total, 
+                    VehiculoDesc = o.Vehiculo != null ? o.Vehiculo.Marca + " " + o.Vehiculo.Modelo : ""
+                })
+            })
+            .ToPagedListAsync(pageNumber, pageSize);
+
+        return new PagedResult<FacturaDto>
+        {
+            TotalCount = paged.TotalCount,
+            PageNumber = paged.PageNumber,
+            PageSize   = paged.PageSize,
+            Data       = paged.Data.Select(f => new FacturaDto
+            {
+                Id = f.Id, NumeroFactura = f.NumeroFactura, FechaEmision = f.FechaEmision,
+                Subtotal = f.Subtotal, Descuento = f.Descuento, IVA = f.IVA, Total = f.Total,
+                Observaciones = f.Observaciones,
+                TipoFacturacion = f.TipoFacturacion.ToString(),
+                EstadoEnvio = f.EstadoEnvio.ToString(),
+                Ordenes = f.Ordenes.Select(o => new OrdenDto
+                {
+                    Id = o.Id, NumeroOrden = o.NumeroOrden, Total = o.Total, VehiculoDescripcion = o.VehiculoDesc
+                }).ToList()
+            }).ToList()
+        };
     }
 
     public async Task<FacturaDto?> GetByIdAsync(Guid id)

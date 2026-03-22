@@ -5,14 +5,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="TallerSaaS – Sistema de Gestión para Talleres Automotrices en Colombia" />
-  <title>@ViewData["Title"] - TallerSaaS</title>
+  <meta name="description" content="GEARDASH — Sistema de Gestión para Talleres Automotrices en Colombia" />
+  <title>@ViewData["Title"] - GEARDASH</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+  <link rel="stylesheet" href="~/TallerSaaS.Web.styles.css" asp-append-version="true" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- FullCalendar Engine moved to global for SPA reliability -->
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.10/index.global.min.js' defer></script>
   @RenderSection("Styles", required: false)
 </head>
 <body>
@@ -22,7 +26,7 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">
         <div class="logo-icon">T</div>
-        <span class="logo-text">TallerSaaS</span>
+        <span class="logo-text">GEARDASH</span>
       </div>
       <nav class="sidebar-nav">
         @if (User.IsInRole("SuperAdmin"))
@@ -86,6 +90,25 @@
              class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Bodega" ? "active" : "")">
             <i class="bi bi-building nav-icon"></i><span class="nav-label">Bodegas</span>
           </a>
+          
+          <div class="sidebar-section-title">Finanzas</div>
+          @if (TenantService.PlanId == 3)
+          {
+            <a asp-controller="Nomina" asp-action="Index"
+               class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Nomina" ? "active" : "")">
+              <i class="bi bi-wallet2 nav-icon"></i><span class="nav-label">Nómina Electrónica</span>
+            </a>
+            <a asp-controller="EmpleadoContrato" asp-action="Index"
+               class="nav-item-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "EmpleadoContrato" ? "active" : "")">
+              <i class="bi bi-people nav-icon"></i><span class="nav-label">Gestión de Personal</span>
+            </a>
+          }
+          else
+          {
+            <a asp-controller="Nomina" asp-action="Upgrade" class="nav-item-link text-muted opacity-75">
+              <i class="bi bi-lock-fill nav-icon text-warning"></i><span class="nav-label">Nómina <span class="badge bg-warning text-dark ms-1" style="font-size:9px;">PRO</span></span>
+            </a>
+          }
           @if (TenantService.PlanId == 3 || User.IsInRole("SuperAdmin"))
           {
             <div class="sidebar-section-title">Contabilidad</div>
@@ -102,7 +125,7 @@
         }
       </nav>
       <div class="sidebar-footer">
-        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0" class="no-spa">
           @Html.AntiForgeryToken()
           <button type="submit" class="nav-item-link w-100" style="background:none;border:none;text-align:left;cursor:pointer;color:#FF3B30;">
             <i class="bi bi-box-arrow-left nav-icon"></i>
@@ -187,13 +210,12 @@
     @RenderBody()
   }
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="~/js/site.js" asp-append-version="true"></script>
-  <script src="~/js/sura-paginator.js" asp-append-version="true"></script>
-
-
-  @await RenderSectionAsync("Scripts", required: false)
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script src="~/js/site.js" asp-append-version="true" defer></script>
+  <script src="~/js/sura-paginator.js" asp-append-version="true" defer></script>
+  
+  @RenderSection("Scripts", required: false)
 </body>
 </html>

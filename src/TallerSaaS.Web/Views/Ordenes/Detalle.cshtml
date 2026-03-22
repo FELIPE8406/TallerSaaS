@@ -275,7 +275,7 @@
 <script>
 (function () {
     'use strict';
-
+    console.log("Initializing Order Detail Module (Autocomplete)...");
     const ordenId     = '@Model.Id';
     const antiForgery = () => document.querySelector('#formAgregarItem [name="__RequestVerificationToken"]')?.value ?? '';
 
@@ -415,19 +415,30 @@
     // ── Typeahead: búsqueda con debounce ──────────────────────────────────────
     let debounceTimer;
     inpBusqueda.addEventListener('input', function () {
+        console.log("Search input detected:", this.value);
         limpiarSeleccion();
         clearError();
         const q = this.value.trim();
-        if (q.length < 2) { cerrarDropdown(); return; }
+        if (q.length < 2) { 
+            console.log("Input too short, closing dropdown");
+            cerrarDropdown(); 
+            return; 
+        }
 
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(async () => {
             try {
-                const resp = await fetch(`/Ordenes/BuscarProductos?q=${encodeURIComponent(q)}`);
+                const url = `/Ordenes/BuscarProductos?q=${encodeURIComponent(q)}`;
+                console.log("Fetching results from:", url);
+                const resp = await fetch(url);
                 const items = await resp.json();
+                console.log("Results received:", items.length);
                 renderDropdown(items);
-            } catch { cerrarDropdown(); }
-        }, 250);
+            } catch (err) { 
+                console.error("Autocomplete fetch error:", err);
+                cerrarDropdown(); 
+            }
+        }, 300);
     });
 
     function renderDropdown(items) {

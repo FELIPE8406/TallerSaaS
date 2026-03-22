@@ -181,6 +181,7 @@ public class AgendaController : Controller
     public async Task<IActionResult> GetVehiculos(Guid clienteId)
     {
         var vehiculos = await _db.Vehiculos
+            .AsNoTracking()
             .Where(v => v.ClienteId == clienteId)
             .Select(v => new { v.Id, Descripcion = $"{v.Anio} {v.Marca} {v.Modelo} ({v.Placa})" })
             .ToListAsync();

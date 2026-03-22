@@ -37,7 +37,12 @@ public class InventarioController : Controller
     public async Task<IActionResult> GetPaged(int page = 1, int size = 10, string? buscar = null, string? categoria = null)
     {
         var paged = await _inventarioService.GetAllPagedAsync(page, size, buscar, categoria);
-        return Json(paged);
+        return Json(new {
+            items = paged.Data,
+            totalPages = paged.TotalPages,
+            currentPage = paged.PageNumber,
+            totalCount = paged.TotalCount
+        });
     }
 
     public async Task<IActionResult> Crear()

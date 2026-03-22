@@ -6,7 +6,7 @@
 <div class="page-header d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="page-title">🧾 Facturas</h1>
-        <p class="text-muted">Historial de facturación del taller</p>
+        <p class="text-muted" id="subtitleFacturas">Historial de facturación del taller</p>
     </div>
     <div class="d-flex gap-2">
         <a asp-action="Nueva" class="btn btn-primary">
@@ -55,16 +55,7 @@
 
 <div class="card glass-card">
     <div class="card-body p-0">
-        @if (!Model.Any())
-        {
-            <div class="text-center py-5 text-muted">
-                <div style="font-size:3rem">🧾</div>
-                <p class="mt-2">No hay facturas generadas aún.</p>
-                <a asp-action="Nueva" class="btn btn-primary btn-sm">Crear primera factura</a>
-            </div>
-        }
-        else
-        {
+        <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-dark">
                     <tr>
@@ -76,57 +67,16 @@
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @foreach (var f in Model)
-                    {
-                        <tr>
-                            <td>
-                                <span class="fw-bold text-primary">@f.NumeroFactura</span>
-                            </td>
-                            <td><small class="text-muted">@f.FechaEmision.ToString("dd/MM/yyyy HH:mm")</small></td>
-                            <td>
-                                @if (f.TipoFacturacion == "Electronica")
-                                {
-                                    <span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #e65100;font-size:11px;">
-                                        🔶 DIAN
-                                    </span>
-                                    @if (f.EstadoEnvio == "PendienteEnvio")
-                                    {
-                                        <span class="badge bg-warning text-dark ms-1" style="font-size:10px;">Pendiente</span>
-                                    }
-                                    else if (f.EstadoEnvio == "Enviada")
-                                    {
-                                        <span class="badge bg-success ms-1" style="font-size:10px;">Enviada</span>
-                                    }
-                                }
-                                else
-                                {
-                                    <span class="badge" style="background:#e8f5e9;color:#1b5e20;border:1px solid #388e3c;font-size:11px;">
-                                        ✅ Interna
-                                    </span>
-                                }
-                            </td>
-                            <td>
-                                @foreach (var o in f.Ordenes)
-                                {
-                                    <span class="badge bg-secondary me-1">@o.NumeroOrden</span>
-                                }
-                            </td>
-                            <td class="text-end fw-bold">
-                                $@f.Total.ToString("N0")
-                            </td>
-                            <td class="text-center">
-                                <a asp-action="Detalle" asp-route-id="@f.Id"
-                                   class="btn btn-sm btn-outline-primary me-1">Ver</a>
-                                <a asp-action="DescargarPdf" asp-route-id="@f.Id"
-                                   class="btn btn-sm btn-outline-danger" target="_blank">
-                                    📄 PDF
-                                </a>
-                            </td>
-                        </tr>
-                    }
+                <tbody id="tbodyFacturas">
+                    <tr><td colspan="6" class="text-center py-5 text-muted">Cargando…</td></tr>
                 </tbody>
             </table>
-        }
+        </div>
     </div>
 </div>
+
+<div id="paginatorFacturas" class="mt-4"></div>
+
+@section Scripts {
+    <script src="/js/facturas.js"></script>
+}

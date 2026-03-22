@@ -1,0 +1,33 @@
+@{ ViewData["Title"] = "Módulo Empresarial Requerido"; }
+
+<div class="d-flex align-items-center justify-content-center" style="min-height: 70vh;">
+    <div class="text-center p-5 card-custom shadow-lg border-0" style="max-width: 600px;">
+        <div class="mb-4">
+            <i class="bi bi-lock-fill text-warning" style="font-size: 4rem; opacity: 0.8;"></i>
+        </div>
+        <h2 class="fw-bold mb-3">Módulo de Nómina Electrónica</h2>
+        <p class="text-muted mb-4 fs-5">
+            Este módulo avanzado está reservado exclusivamente para talleres con el plan <strong>Empresarial</strong>.
+        </p>
+        
+        <div class="bg-light p-4 rounded-4 mb-4 text-start">
+            <h6 class="text-uppercase small fw-bold text-primary mb-3">Beneficios del Plan Empresarial:</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Nómina Electrónica integrada</li>
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Reporte automático a la DIAN</li>
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Cálculo de comisiones por mecánico</li>
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Soporte prioritario 24/7</li>
+            </ul>
+        </div>
+
+        <div class="d-grid gap-2">
+            <a href="https://wa.me/573000000000?text=Hola,%20deseo%20subir%20mi%20taller%20al%20plan%20Empresarial" 
+               target="_blank" class="btn btn-primary btn-lg py-3 fw-bold">
+                <i class="bi bi-arrow-up-circle me-2"></i>Contactar para Upgrade
+            </a>
+            <a asp-controller="Dashboard" asp-action="Index" class="btn btn-link text-muted">
+                Volver al Dashboard
+            </a>
+        </div>
+    </div>
+</div>

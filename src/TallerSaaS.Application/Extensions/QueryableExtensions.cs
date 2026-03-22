@@ -18,7 +18,7 @@ public static class QueryableExtensions
     public static async Task<PagedResult<T>> ToPagedListAsync<T>(this IQueryable<T> query, int pageNumber, int pageSize)
     {
         if (pageNumber < 1) pageNumber = 1;
-        if (pageSize < 1) pageSize = 10;
+        if (pageSize < 1) pageSize = 20;
 
         var count = await query.CountAsync();
         

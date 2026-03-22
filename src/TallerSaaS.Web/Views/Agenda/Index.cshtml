@@ -15,22 +15,13 @@
         </div>
     </div>
 
-    <!-- Appointment List Component -->
-    <div class="card shadow-sm border-0 mb-4 bg-dark text-white rounded-4">
-        <div class="card-body p-4">
-            <h5 class="fw-bold mb-3 d-flex align-items-center">
-                <i class="bi bi-list-task me-2 text-info"></i>Citas de Hoy
-            </h5>
-            <div id="todayAppointmentsList">
-                <div class="text-center py-3 text-muted">
-                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>Cargando citas...
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body p-3">
+    <!-- Modernized Calendar Interface -->
+    <script>
+        // Critical: Provide scale data immediately for the dispatcher
+        window.mechanicsData = @Html.Raw(Json.Serialize(ViewBag.Mechanics));
+    </script>
+    <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 16px;">
+        <div class="card-body p-3" style="min-height: 700px;">
             <div id="calendar"></div>
         </div>
     </div>
@@ -127,640 +118,340 @@
     <!-- FullCalendar CSS -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
     <style>
-        .fc { max-height: 800px; font-family: 'Inter', sans-serif; }
-        .appointment-row {
-            transition: background-color 0.2s;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer;
+        .fc { max-height: 850px; font-family: 'Inter', sans-serif; border: none; }
+        .fc-theme-bootstrap5 a { color: var(--text); text-decoration: none; }
+        .fc-header-toolbar { padding: 1.5rem; background: var(--surface); margin-bottom: 0 !important; }
+        .fc-view-harness { background: var(--surface2); padding: 10px; }
+        .fc-col-header-cell { background: var(--surface); padding: 10px 0 !important; }
+        .fc-timegrid-slot { height: 50px !important; border-bottom: 1px solid var(--border) !important; }
+        .fc-event { 
+            border-radius: 8px !important; 
+            padding: 4px 8px !important; 
+            font-size: 0.85rem !important; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: none !important;
+            margin: 2px !important;
         }
-        .appointment-row:last-child {
-            border-bottom: none;
-        }
-        .appointment-row:hover {
-            background-color: rgba(255,255,255,0.05);
-        }
-        .time-badge {
-            background-color: rgba(255,255,255,0.1);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.85rem;
-        }
-        .empty-state-card {
-            background-color: rgba(255,255,255,0.02);
-            border: 1px dashed rgba(255,255,255,0.1);
-            border-radius: 8px;
-        }
-        .appt-pagination {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            font-size: 0.9rem;
-            color: #888;
-        }
-        .page-num {
-            cursor: pointer;
-            padding: 2px 5px;
-            color: #bbb;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .page-num:hover {
-            color: #ff4d4d;
-        }
-        .page-num.active {
-            color: #ff4d4d;
-            font-weight: bold;
-        }
-        .pag-info {
-            margin-left: 15px;
-            color: #666;
-        }
-        .fc-toolbar-title { font-weight: bold; font-size: 1.25rem !important; }
-        .fc-event { cursor: pointer; padding: 2px 4px; border: none; }
+        .fc-v-event .fc-event-main { color: white !important; }
         .fc-resource-timeline-lane { height: 100px; }
-        .modal-content { border-radius: 12px; }
+        .modal-content { border-radius: 16px; border: none; }
+        .btn-primary { border-radius: 10px; padding: 0.6rem 1.5rem; font-weight: 600; }
+        
+        /* Custom Colors for Mechanic Resources */
+        .mech-color-1 { background-color: #4e73df !important; }
+        .mech-color-2 { background-color: #1cc88a !important; }
+        .mech-color-3 { background-color: #36b9cc !important; }
+        .mech-color-4 { background-color: #f6c23e !important; }
+        .mech-color-5 { background-color: #e74a3b !important; }
     </style>
 }
 
-@{
-    if (ViewData["IsAjaxRequest"] as bool? == true)
-    {
-        <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.10/index.global.min.js'></script>
-        <script>
-            (function() {
-                var calendar;
-                var appointmentModal;
-                var todayAppointments = [];
-                var currentApptPage = 1;
-                var apptsPerPage = 10;
+<!-- Scripts moved to body to support SPA re-execution -->
+<script>
+    (function() {
+        var calendar;
+        var appointmentModal;
+        window.initAgenda = function(retryCount = 0) {
+            console.log('Antigravity: Initializing Agenda... Attempt: ' + (retryCount + 1));
+            
+            if (typeof FullCalendar === 'undefined') {
+                if (retryCount < 10) {
+                    setTimeout(() => window.initAgenda(retryCount + 1), 200);
+                    return;
+                }
+                console.error('Antigravity: FullCalendar not loaded after 10 retries.');
+                return;
+            }
 
-                function initAgenda() {
-                    var calendarEl = document.getElementById('calendar');
-                    if (!calendarEl) return;
-                    var modalEl = document.getElementById('appointmentModal');
-                    if (modalEl && typeof bootstrap !== 'undefined') {
-                        appointmentModal = new bootstrap.Modal(modalEl);
-                    }
+            var calendarEl = document.getElementById('calendar');
+            var modalEl = document.getElementById('appointmentModal');
+            
+            if (modalEl && typeof bootstrap !== 'undefined' && !appointmentModal) {
+                appointmentModal = new bootstrap.Modal(modalEl);
+                console.log('Antigravity: Modal initialized.');
+            }
+
+            if (!calendarEl) {
+                if (retryCount < 10) {
+                    setTimeout(() => window.initAgenda(retryCount + 1), 200);
+                }
+                return;
+            }
+
+            // Ensure clean state for SPA re-initialization
+            if (calendar) {
+                try { calendar.destroy(); } catch(e) {}
+            }
+            calendarEl.innerHTML = '';
+
+            // 2. Initialize Calendar (decoupled with internal retry)
+            let fcRetryCount = 0;
+            const tryRenderCalendar = () => {
+                if (typeof FullCalendar !== 'undefined') {
+                    console.log('Antigravity: FullCalendar found, rendering...');
                     var mechanicsData = window.mechanicsData || [];
                     var resData = mechanicsData.map(m => ({ 
                         id: m.id || m.Id, 
                         title: m.nombreCompleto || m.NombreCompleto,
                         businessHours: m.businessHours || m.BusinessHours
                     }));
+                    
+                    if (calendar) {
+                        calendar.destroy();
+                        console.log('Antigravity: Old calendar destroyed for clean re-render.');
+                    }
+
                     calendar = new FullCalendar.Calendar(calendarEl, {
-                        initialView: 'resourceTimeGridDay',
+                        initialView: 'resourceTimeGridWeek',
                         themeSystem: 'bootstrap5',
+                        height: 'auto',
+                        contentHeight: 'auto',
+                        handleWindowResize: true,
+                        expandRows: true,
                         locale: 'es',
                         businessHours: true,
+                        hiddenDays: [0], // Ocultar Domingo por defecto para "Semana Laboral"
                         slotMinTime: '07:00:00',
                         slotMaxTime: '19:00:00',
+                        allDaySlot: false,
+                        nowIndicator: true,
                         headerToolbar: {
                             left: 'prev,next today',
                             center: 'title',
-                            right: 'resourceTimeGridDay,resourceTimeGridWeek,dayGridMonth'
+                            right: 'resourceTimeGridWeek,resourceTimeGridDay,dayGridMonth'
                         },
                         resources: resData,
                         events: '/Agenda/GetAppointments',
                         editable: true,
                         selectable: true,
                         select: function(info) {
-                            openAppointmentModal({
+                            window.openAppointmentModal({
                                 startDateTime: info.startStr.substring(0, 16),
                                 mechanicId: info.resource ? info.resource.id : ''
                             });
+                        },
+                        eventDidMount: function(info) {
+                            const resId = info.event.getResources()[0]?.id;
+                            if (resId && window.mechanicsData) {
+                                const idx = window.mechanicsData.findIndex(m => (m.id || m.Id) === resId);
+                                if (idx !== -1) info.el.classList.add('mech-color-' + ((idx % 5) + 1));
+                            }
                         },
                         eventClick: function(info) { editAppointment(info.event); },
                         eventDrop: function(info) { updateAppointmentTime(info.event); },
                         eventResize: function(info) { updateAppointmentTime(info.event); }
                     });
                     calendar.render();
-                    setTimeout(loadTodayAppointments, 100);
+                    setTimeout(() => { if(calendar) calendar.updateSize(); }, 500);
+                    console.log('Antigravity: Calendar render() called.');
+                } else if (fcRetryCount < 15) {
+                    fcRetryCount++;
+                    console.log('Antigravity: Retrying FullCalendar render... (' + fcRetryCount + ')');
+                    setTimeout(tryRenderCalendar, 400);
+                } else {
+                    console.error('Antigravity: FATAL - FullCalendar script not accessible globally.');
+                    calendarEl.innerHTML = '<div class="alert alert-danger">Error: No se pudo cargar el motor del calendario. Por favor, refresca la página (F5).</div>';
                 }
-
-                window.openAppointmentModal = function(defaults = {}) {
-                    document.getElementById('appointmentForm').reset();
-                    document.getElementById('appointmentId').value = '';
-                    document.getElementById('modalTitle').innerText = 'Nueva Cita';
-                    document.getElementById('statusContainer').style.display = 'none';
-                    document.getElementById('appointmentActions').style.display = 'none';
-                    if (defaults.startDateTime) {
-                        document.getElementById('startDateTime').value = defaults.startDateTime;
-                        calculateEndTime();
-                    }
-                    if (defaults.mechanicId) {
-                        document.getElementById('mechanicId').value = defaults.mechanicId;
-                    }
-                    if (appointmentModal) appointmentModal.show();
-                };
-
-                window.editAppointment = async function(event) {
-                    document.getElementById('appointmentId').value = event.id;
-                    document.getElementById('modalTitle').innerText = 'Editar Cita';
-                    document.getElementById('statusContainer').style.display = 'block';
-                    document.getElementById('appointmentActions').style.display = 'block';
-                    document.getElementById('serviceType').value = event.extendedProps.serviceType;
-                    document.getElementById('startDateTime').value = event.startStr.substring(0, 16);
-                    document.getElementById('endDateTime').value = event.endStr.substring(0, 16);
-                    document.getElementById('mechanicId').value = event.getResources()[0]?.id || '';
-                    document.getElementById('status').value = event.extendedProps.status;
-                    const clientId = event.extendedProps.clienteId;
-                    if (clientId) {
-                        document.getElementById('clienteId').value = clientId;
-                        await loadVehiculos();
-                        document.getElementById('vehiculoId').value = event.extendedProps.vehiculoId;
-                    }
-                    if (appointmentModal) appointmentModal.show();
-                };
-
-                window.saveAppointment = async function() {
-                    const form = document.getElementById('appointmentForm');
-                    if (!form.checkValidity()) { form.reportValidity(); return; }
-                    const formData = new FormData(form);
-                    const payload = {};
-                    formData.forEach((value, key) => {
-                        if (key === 'Id' && !value) { payload[key] = '00000000-0000-0000-0000-000000000000'; }
-                        else if (!isNaN(value) && value !== '' && key !== 'MechanicId') { payload[key] = Number(value); }
-                        else { payload[key] = value; }
-                    });
-                    payload.StartDateTime = document.getElementById('startDateTime').value;
-                    payload.EndDateTime = document.getElementById('endDateTime').value;
-                    const response = await fetch('/Agenda/SaveAppointment', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        if (appointmentModal) appointmentModal.hide();
-                        calendar.refetchEvents();
-                        setTimeout(loadTodayAppointments, 100);
-                    } else if (typeof Swal !== 'undefined') {
-                        Swal.fire('Error', result.message, 'error');
-                    }
-                };
-
-                window.updateAppointmentTime = async function(event) {
-                    const payload = {
-                        id: event.id,
-                        mechanicId: event.getResources()[0]?.id,
-                        startDateTime: event.startStr,
-                        endDateTime: event.endStr,
-                        serviceType: event.extendedProps.serviceType,
-                        status: event.extendedProps.status
-                    };
-                    const response = await fetch('/Agenda/SaveAppointment', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json();
-                    if (!result.success) {
-                        calendar.refetchEvents();
-                        if (typeof Swal !== 'undefined') Swal.fire('Error', result.message, 'error');
-                    } else {
-                        setTimeout(loadTodayAppointments, 100);
-                    }
-                };
-
-                window.convertToOrder = async function() {
-                    const id = document.getElementById('appointmentId').value;
-                    let confirmed = true;
-                    if (typeof Swal !== 'undefined') {
-                        const result = await Swal.fire({
-                            title: '¿Convertir a Orden?',
-                            text: 'Se creará una nueva orden de servicio y se marcará la cita como completada.',
-                            icon: 'question',
-                            showCancelButton: true,
-                            confirmButtonText: 'Sí, crear orden'
-                        });
-                        confirmed = result.isConfirmed;
-                    }
-                    if (confirmed) {
-                        const res = await fetch('/Agenda/ConvertToOrder?id=' + id, { method: 'POST' });
-                        const data = await res.json();
-                        if (data.success) {
-                            if (appointmentModal) appointmentModal.hide();
-                            calendar.refetchEvents();
-                            setTimeout(loadTodayAppointments, 100);
-                            setTimeout(() => window.location.href = '/Ordenes/Detalle/' + data.orderId, 1500);
-                        } else if (typeof Swal !== 'undefined') {
-                            Swal.fire('Error', data.message, 'error');
-                        }
-                    }
-                };
-
-                window.loadVehiculos = async function() {
-                    const clienteId = document.getElementById('clienteId').value;
-                    const select = document.getElementById('vehiculoId');
-                    select.innerHTML = '<option value="">Cargando...</option>';
-                    if (!clienteId) return;
-                    const res = await fetch('/Agenda/GetVehiculos?clienteId=' + clienteId);
-                    const data = await res.json();
-                    select.innerHTML = data.length ? '' : '<option value="">No hay vehículos registrados</option>';
-                    data.forEach(v => {
-                        const opt = document.createElement('option');
-                        opt.value = v.id; opt.innerText = v.descripcion; select.appendChild(opt);
-                    });
-                };
-
-                window.calculateEndTime = function() {
-                    const start = document.getElementById('startDateTime').value;
-                    const duration = parseInt(document.getElementById('estimatedDuration').value);
-                    if (!start || isNaN(duration)) return;
-                    const startDate = new Date(start);
-                    const endDate = new Date(startDate.getTime() + duration * 60000);
-                    const yyyy = endDate.getFullYear();
-                    const mm = String(endDate.getMonth() + 1).padStart(2, '0');
-                    const dd = String(endDate.getDate()).padStart(2, '0');
-                    const hh = String(endDate.getHours()).padStart(2, '0');
-                    const min = String(endDate.getMinutes()).padStart(2, '0');
-                    document.getElementById('endDateTime').value = yyyy + '-' + mm + '-' + dd + 'T' + hh + ':' + min;
-                };
-
-                async function loadTodayAppointments() {
-                    const listContainer = document.getElementById('todayAppointmentsList');
-                    if (!listContainer) return;
-                    listContainer.innerHTML = '<div class="text-center py-3 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando citas...</div>';
-                    const now = new Date();
-                    const yyyy = now.getFullYear();
-                    const mm = String(now.getMonth() + 1).padStart(2, '0');
-                    const dd = String(now.getDate()).padStart(2, '0');
-                    const start = yyyy + '-' + mm + '-' + dd + 'T00:00:00';
-                    const end = yyyy + '-' + mm + '-' + dd + 'T23:59:59';
-                    try {
-                        const res = await fetch('/Agenda/GetAppointments?start=' + start + '&end=' + end);
-                        if (!res.ok) throw new Error('Error');
-                        const events = await res.json();
-                        if (!Array.isArray(events) || events.length === 0) {
-                            listContainer.innerHTML = '<div class="empty-state-card text-center py-4"><p class="text-muted mb-0">Sin citas para hoy</p></div>';
-                            return;
-                        }
-                        events.sort((a, b) => new Date(a.start) - new Date(b.start));
-                        todayAppointments = events;
-                        window.renderAppointmentsPage(1);
-                    } catch (err) {
-                        listContainer.innerHTML = '<div class="text-danger text-center py-4">Error al cargar citas.</div>';
-                    }
-                }
-
-                window.renderAppointmentsPage = function(page) {
-                    const listContainer = document.getElementById('todayAppointmentsList');
-                    if (!listContainer) return;
-                    currentApptPage = page;
-                    const totalItems = todayAppointments.length;
-                    const totalPages = Math.ceil(totalItems / apptsPerPage);
-                    if (currentApptPage < 1) currentApptPage = 1;
-                    if (currentApptPage > totalPages && totalPages > 0) currentApptPage = totalPages;
-                    const startIndex = (currentApptPage - 1) * apptsPerPage;
-                    const endIndex = Math.min(startIndex + apptsPerPage, totalItems);
-                    const paginatedEvents = todayAppointments.slice(startIndex, endIndex);
-                    var html = '<div class="list-group list-group-flush">';
-                    paginatedEvents.forEach(ev => {
-                        const startDate = new Date(ev.start);
-                        const endDate = new Date(ev.end);
-                        const startTime = startDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-                        const endTime = endDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-                        var mechanicName = 'Sin asignar';
-                        if (window.mechanicsData && ev.resourceId) {
-                            const m = window.mechanicsData.find(x => x.id === ev.resourceId);
-                            if (m) mechanicName = m.nombreCompleto;
-                        }
-                        const cliente = ev.extendedProps.clienteNombre || 'Cliente';
-                        const vehiculo = ev.extendedProps.vehiculoDescripcion || 'Vehículo';
-                        const srvType = ev.extendedProps.serviceType || 'Servicio';
-                        html += '<div class="appointment-row py-3 px-2 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3" onclick="editAppointmentFromList(\'' + ev.id + '\')">' +
-                                '<div class="d-flex align-items-center gap-3 w-100">' +
-                                '<div class="time-badge text-info fw-bold text-center" style="min-width: 130px;">' + startTime + ' - ' + endTime + '</div>' +
-                                '<div class="flex-grow-1 text-truncate">' +
-                                '<div class="fw-bold mb-1 text-light">' + cliente + '</div>' +
-                                '<div class="small text-light opacity-75"><i class="bi bi-car-front me-1"></i>' + vehiculo + '</div>' +
-                                '</div></div>' +
-                                '<div class="d-flex align-items-center justify-content-end gap-3 w-100" style="max-width: 350px;">' +
-                                '<div class="text-end text-truncate w-50">' +
-                                '<div class="small text-muted mb-1 d-none d-md-block">Mecánico</div>' +
-                                '<div class="fw-medium text-light">' + mechanicName + '</div>' +
-                                '</div>' +
-                                '<div class="text-end text-truncate w-50">' +
-                                '<div class="small text-muted mb-1 d-none d-md-block">Servicio</div>' +
-                                '<span class="badge border border-secondary text-light fw-normal w-100 text-truncate">' + srvType + '</span>' +
-                                '</div></div></div>';
-                    });
-                    html += '</div>';
-                    if (totalPages > 1) {
-                        html += '<div class="appt-pagination mt-4 pt-3 border-top border-secondary">';
-                        for (var i = 1; i <= totalPages; i++) {
-                            var activeClass = (i === currentApptPage) ? 'active' : '';
-                            html += '<a href="#" class="page-num ' + activeClass + '" onclick="renderAppointmentsPage(' + i + '); return false;">' + i + '</a> ';
-                        }
-                        html += '<span class="pag-info">paginas de ' + totalItems + ' registros</span></div>';
-                    }
-                    listContainer.innerHTML = html;
-                };
-
-                window.editAppointmentFromList = function(id) {
-                    if (calendar) {
-                        const event = calendar.getEventById(id);
-                        if (event) window.editAppointment(event);
-                    }
-                };
-
-                if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initAgenda); }
-                else { setTimeout(initAgenda, 100); }
-            })();
-        </script>
-    }
-    else
-    {
-        @section Scripts {
-            <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.10/index.global.min.js'></script>
-            <script>
-                (function() {
-                    var calendar;
-                    var appointmentModal;
-                    var todayAppointments = [];
-                    var currentApptPage = 1;
-                    var apptsPerPage = 10;
-
-                    function initAgenda() {
-                        var calendarEl = document.getElementById('calendar');
-                        if (!calendarEl) return;
-                        var modalEl = document.getElementById('appointmentModal');
-                        if (modalEl && typeof bootstrap !== 'undefined') {
-                            appointmentModal = new bootstrap.Modal(modalEl);
-                        }
-                        var mechanicsData = window.mechanicsData || [];
-                        var resData = mechanicsData.map(m => ({ 
-                            id: m.id || m.Id, 
-                            title: m.nombreCompleto || m.NombreCompleto,
-                            businessHours: m.businessHours || m.BusinessHours
-                        }));
-                        calendar = new FullCalendar.Calendar(calendarEl, {
-                            initialView: 'resourceTimeGridDay',
-                            themeSystem: 'bootstrap5',
-                            locale: 'es',
-                            businessHours: true,
-                            slotMinTime: '07:00:00',
-                            slotMaxTime: '19:00:00',
-                            headerToolbar: {
-                                left: 'prev,next today',
-                                center: 'title',
-                                right: 'resourceTimeGridDay,resourceTimeGridWeek,dayGridMonth'
-                            },
-                            resources: resData,
-                            events: '/Agenda/GetAppointments',
-                            editable: true,
-                            selectable: true,
-                            select: function(info) {
-                                openAppointmentModal({
-                                    startDateTime: info.startStr.substring(0, 16),
-                                    mechanicId: info.resource ? info.resource.id : ''
-                                });
-                            },
-                            eventClick: function(info) { editAppointment(info.event); },
-                            eventDrop: function(info) { updateAppointmentTime(info.event); },
-                            eventResize: function(info) { updateAppointmentTime(info.event); }
-                        });
-                        calendar.render();
-                        setTimeout(loadTodayAppointments, 100);
-                    }
-
-                    window.openAppointmentModal = function(defaults = {}) {
-                        document.getElementById('appointmentForm').reset();
-                        document.getElementById('appointmentId').value = '';
-                        document.getElementById('modalTitle').innerText = 'Nueva Cita';
-                        document.getElementById('statusContainer').style.display = 'none';
-                        document.getElementById('appointmentActions').style.display = 'none';
-                        if (defaults.startDateTime) {
-                            document.getElementById('startDateTime').value = defaults.startDateTime;
-                            calculateEndTime();
-                        }
-                        if (defaults.mechanicId) {
-                            document.getElementById('mechanicId').value = defaults.mechanicId;
-                        }
-                        if (appointmentModal) appointmentModal.show();
-                    };
-
-                    window.editAppointment = async function(event) {
-                        document.getElementById('appointmentId').value = event.id;
-                        document.getElementById('modalTitle').innerText = 'Editar Cita';
-                        document.getElementById('statusContainer').style.display = 'block';
-                        document.getElementById('appointmentActions').style.display = 'block';
-                        document.getElementById('serviceType').value = event.extendedProps.serviceType;
-                        document.getElementById('startDateTime').value = event.startStr.substring(0, 16);
-                        document.getElementById('endDateTime').value = event.endStr.substring(0, 16);
-                        document.getElementById('mechanicId').value = event.getResources()[0]?.id || '';
-                        document.getElementById('status').value = event.extendedProps.status;
-                        const clientId = event.extendedProps.clienteId;
-                        if (clientId) {
-                            document.getElementById('clienteId').value = clientId;
-                            await loadVehiculos();
-                            document.getElementById('vehiculoId').value = event.extendedProps.vehiculoId;
-                        }
-                        if (appointmentModal) appointmentModal.show();
-                    };
-
-                    window.saveAppointment = async function() {
-                        const form = document.getElementById('appointmentForm');
-                        if (!form.checkValidity()) { form.reportValidity(); return; }
-                        const formData = new FormData(form);
-                        const payload = {};
-                        formData.forEach((value, key) => {
-                            if (key === 'Id' && !value) { payload[key] = '00000000-0000-0000-0000-000000000000'; }
-                            else if (!isNaN(value) && value !== '' && key !== 'MechanicId') { payload[key] = Number(value); }
-                            else { payload[key] = value; }
-                        });
-                        payload.StartDateTime = document.getElementById('startDateTime').value;
-                        payload.EndDateTime = document.getElementById('endDateTime').value;
-                        const response = await fetch('/Agenda/SaveAppointment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        const result = await response.json();
-                        if (result.success) {
-                            if (appointmentModal) appointmentModal.hide();
-                            calendar.refetchEvents();
-                            setTimeout(loadTodayAppointments, 100);
-                        } else if (typeof Swal !== 'undefined') {
-                            Swal.fire('Error', result.message, 'error');
-                        }
-                    };
-
-                    window.updateAppointmentTime = async function(event) {
-                        const payload = {
-                            id: event.id,
-                            mechanicId: event.getResources()[0]?.id,
-                            startDateTime: event.startStr,
-                            endDateTime: event.endStr,
-                            serviceType: event.extendedProps.serviceType,
-                            status: event.extendedProps.status
-                        };
-                        const response = await fetch('/Agenda/SaveAppointment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        const result = await response.json();
-                        if (!result.success) {
-                            calendar.refetchEvents();
-                            if (typeof Swal !== 'undefined') Swal.fire('Error', result.message, 'error');
-                        } else {
-                            setTimeout(loadTodayAppointments, 100);
-                        }
-                    };
-
-                    window.convertToOrder = async function() {
-                        const id = document.getElementById('appointmentId').value;
-                        let confirmed = true;
-                        if (typeof Swal !== 'undefined') {
-                            const result = await Swal.fire({
-                                title: '¿Convertir a Orden?',
-                                text: 'Se creará una nueva orden de servicio y se marcará la cita como completada.',
-                                icon: 'question',
-                                showCancelButton: true,
-                                confirmButtonText: 'Sí, crear orden'
-                            });
-                            confirmed = result.isConfirmed;
-                        }
-                        if (confirmed) {
-                            const res = await fetch('/Agenda/ConvertToOrder?id=' + id, { method: 'POST' });
-                            const data = await res.json();
-                            if (data.success) {
-                                if (appointmentModal) appointmentModal.hide();
-                                calendar.refetchEvents();
-                                setTimeout(loadTodayAppointments, 100);
-                                setTimeout(() => window.location.href = '/Ordenes/Detalle/' + data.orderId, 1500);
-                            } else if (typeof Swal !== 'undefined') {
-                                Swal.fire('Error', data.message, 'error');
-                            }
-                        }
-                    };
-
-                    window.loadVehiculos = async function() {
-                        const clienteId = document.getElementById('clienteId').value;
-                        const select = document.getElementById('vehiculoId');
-                        select.innerHTML = '<option value="">Cargando...</option>';
-                        if (!clienteId) return;
-                        const res = await fetch('/Agenda/GetVehiculos?clienteId=' + clienteId);
-                        const data = await res.json();
-                        select.innerHTML = data.length ? '' : '<option value="">No hay vehículos registrados</option>';
-                        data.forEach(v => {
-                            const opt = document.createElement('option');
-                            opt.value = v.id; opt.innerText = v.descripcion; select.appendChild(opt);
-                        });
-                    };
-
-                    window.calculateEndTime = function() {
-                        const start = document.getElementById('startDateTime').value;
-                        const duration = parseInt(document.getElementById('estimatedDuration').value);
-                        if (!start || isNaN(duration)) return;
-                        const startDate = new Date(start);
-                        const endDate = new Date(startDate.getTime() + duration * 60000);
-                        const yyyy = endDate.getFullYear();
-                        const mm = String(endDate.getMonth() + 1).padStart(2, '0');
-                        const dd = String(endDate.getDate()).padStart(2, '0');
-                        const hh = String(endDate.getHours()).padStart(2, '0');
-                        const min = String(endDate.getMinutes()).padStart(2, '0');
-                        document.getElementById('endDateTime').value = yyyy + '-' + mm + '-' + dd + 'T' + hh + ':' + min;
-                    };
-
-                    async function loadTodayAppointments() {
-                        const listContainer = document.getElementById('todayAppointmentsList');
-                        if (!listContainer) return;
-                        listContainer.innerHTML = '<div class="text-center py-3 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando citas...</div>';
-                        const now = new Date();
-                        const yyyy = now.getFullYear();
-                        const mm = String(now.getMonth() + 1).padStart(2, '0');
-                        const dd = String(now.getDate()).padStart(2, '0');
-                        const start = yyyy + '-' + mm + '-' + dd + 'T00:00:00';
-                        const end = yyyy + '-' + mm + '-' + dd + 'T23:59:59';
-                        try {
-                            const res = await fetch('/Agenda/GetAppointments?start=' + start + '&end=' + end);
-                            if (!res.ok) throw new Error('Error');
-                            const events = await res.json();
-                            if (!Array.isArray(events) || events.length === 0) {
-                                listContainer.innerHTML = '<div class="empty-state-card text-center py-4"><p class="text-muted mb-0">Sin citas para hoy</p></div>';
-                                return;
-                            }
-                            events.sort((a, b) => new Date(a.start) - new Date(b.start));
-                            todayAppointments = events;
-                            window.renderAppointmentsPage(1);
-                        } catch (err) {
-                            listContainer.innerHTML = '<div class="text-danger text-center py-4">Error al cargar citas.</div>';
-                        }
-                    }
-
-                    window.renderAppointmentsPage = function(page) {
-                        const listContainer = document.getElementById('todayAppointmentsList');
-                        if (!listContainer) return;
-                        currentApptPage = page;
-                        const totalItems = todayAppointments.length;
-                        const totalPages = Math.ceil(totalItems / apptsPerPage);
-                        if (currentApptPage < 1) currentApptPage = 1;
-                        if (currentApptPage > totalPages && totalPages > 0) currentApptPage = totalPages;
-                        const startIndex = (currentApptPage - 1) * apptsPerPage;
-                        const endIndex = Math.min(startIndex + apptsPerPage, totalItems);
-                        const paginatedEvents = todayAppointments.slice(startIndex, endIndex);
-                        var html = '<div class="list-group list-group-flush">';
-                        paginatedEvents.forEach(ev => {
-                            const startDate = new Date(ev.start);
-                            const endDate = new Date(ev.end);
-                            const startTime = startDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-                            const endTime = endDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-                            var mechanicName = 'Sin asignar';
-                            if (window.mechanicsData && ev.resourceId) {
-                                const m = window.mechanicsData.find(x => (x.id || x.Id) === ev.resourceId);
-                                if (m) mechanicName = m.nombreCompleto || m.NombreCompleto;
-                            }
-                            const cliente = ev.extendedProps.clienteNombre || 'Cliente';
-                            const vehiculo = ev.extendedProps.vehiculoDescripcion || 'Vehículo';
-                            const srvType = ev.extendedProps.serviceType || 'Servicio';
-                            html += '<div class="appointment-row py-3 px-2 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3" onclick="editAppointmentFromList(\'' + ev.id + '\')">' +
-                                    '<div class="d-flex align-items-center gap-3 w-100">' +
-                                    '<div class="time-badge text-info fw-bold text-center" style="min-width: 130px;">' + startTime + ' - ' + endTime + '</div>' +
-                                    '<div class="flex-grow-1 text-truncate">' +
-                                    '<div class="fw-bold mb-1 text-light">' + cliente + '</div>' +
-                                    '<div class="small text-light opacity-75"><i class="bi bi-car-front me-1"></i>' + vehiculo + '</div>' +
-                                    '</div></div>' +
-                                    '<div class="d-flex align-items-center justify-content-end gap-3 w-100" style="max-width: 350px;">' +
-                                    '<div class="text-end text-truncate w-50">' +
-                                    '<div class="small text-muted mb-1 d-none d-md-block">Mecánico</div>' +
-                                    '<div class="fw-medium text-light">' + mechanicName + '</div>' +
-                                    '</div>' +
-                                    '<div class="text-end text-truncate w-50">' +
-                                    '<div class="small text-muted mb-1 d-none d-md-block">Servicio</div>' +
-                                    '<span class="badge border border-secondary text-light fw-normal w-100 text-truncate">' + srvType + '</span>' +
-                                    '</div></div></div>';
-                        });
-                        html += '</div>';
-                        if (totalPages > 1) {
-                            html += '<div class="appt-pagination mt-4 pt-3 border-top border-secondary">';
-                            for (var i = 1; i <= totalPages; i++) {
-                                var activeClass = (i === currentApptPage) ? 'active' : '';
-                                html += '<a href="#" class="page-num ' + activeClass + '" onclick="renderAppointmentsPage(' + i + '); return false;">' + i + '</a> ';
-                            }
-                            html += '<span class="pag-info">paginas de ' + totalItems + ' registros</span></div>';
-                        }
-                        listContainer.innerHTML = html;
-                    };
-
-                    window.editAppointmentFromList = function(id) {
-                        if (calendar) {
-                            const event = calendar.getEventById(id);
-                            if (event) window.editAppointment(event);
-                        }
-                    };
-
-                    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initAgenda); }
-                    else { setTimeout(initAgenda, 100); }
-                })();
-            </script>
+            };
+            
+            tryRenderCalendar();
         }
-    }
-}
 
-<script>
-    // Initialize mechanics array immediately so it's available to external scripts
-    window.mechanicsData = @Html.Raw(Json.Serialize(ViewBag.Mechanics));
+        // Helper to format string to 12h time (AM/PM) WITHOUT any timezone shifts
+        function formatTime12h(timeStr) {
+            if (!timeStr) return '--:--';
+            
+            // Handle various formats: "2026-03-18T09:10:00" or "2026-03-18 09:10:00"
+            let timePart = "";
+            if (timeStr.includes('T')) {
+                timePart = timeStr.split('T')[1];
+            } else if (timeStr.includes(' ')) {
+                timePart = timeStr.split(' ')[1];
+            } else {
+                timePart = timeStr; // Fallback if only time provided
+            }
+            
+            if (!timePart) return '--:--';
+            
+            // Get HH:mm
+            const hh_mm = timePart.substring(0, 5);
+            const bits = hh_mm.split(':');
+            if (bits.length < 2) return '--:--';
+            
+            let hour = parseInt(bits[0]);
+            const mm = bits[1];
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            hour = hour % 12;
+            hour = hour ? hour : 12; // 0 becomes 12
+            
+            return `${String(hour).padStart(2, '0')}:${mm} ${ampm}`;
+        }
+
+        window.openAppointmentModal = function(defaults = {}) {
+            const form = document.getElementById('appointmentForm');
+            if (form) form.reset();
+            const idEl = document.getElementById('appointmentId');
+            if (idEl) idEl.value = '';
+            const titleEl = document.getElementById('modalTitle');
+            if (titleEl) titleEl.innerText = 'Nueva Cita';
+            const statusCont = document.getElementById('statusContainer');
+            if (statusCont) statusCont.style.display = 'none';
+            const actionsCont = document.getElementById('appointmentActions');
+            if (actionsCont) actionsCont.style.display = 'none';
+            if (defaults.startDateTime) {
+                const sdt = document.getElementById('startDateTime');
+                if (sdt) sdt.value = defaults.startDateTime;
+                if (typeof calculateEndTime === 'function') calculateEndTime();
+            }
+            if (defaults.mechanicId) {
+                const mId = document.getElementById('mechanicId');
+                if (mId) mId.value = defaults.mechanicId;
+            }
+            if (appointmentModal) appointmentModal.show();
+        };
+
+        window.editAppointment = async function(event) {
+            const idEl = document.getElementById('appointmentId');
+            if (idEl) idEl.value = event.id;
+            const titleEl = document.getElementById('modalTitle');
+            if (titleEl) titleEl.innerText = 'Editar Cita';
+            const statusCont = document.getElementById('statusContainer');
+            if (statusCont) statusCont.style.display = 'block';
+            const actionsCont = document.getElementById('appointmentActions');
+            if (actionsCont) actionsCont.style.display = 'block';
+            
+            const stEl = document.getElementById('serviceType');
+            if (stEl) stEl.value = event.extendedProps.serviceType;
+            const sdt = document.getElementById('startDateTime');
+            if (sdt) sdt.value = event.startStr.substring(0, 16);
+            const edt = document.getElementById('endDateTime');
+            if (edt) edt.value = event.endStr.substring(0, 16);
+            
+            const mId = document.getElementById('mechanicId');
+            if (mId) mId.value = event.getResources()[0]?.id || '';
+            const sEl = document.getElementById('status');
+            if (sEl) sEl.value = event.extendedProps.status;
+            
+            const clientId = event.extendedProps.clienteId;
+            if (clientId) {
+                const cIdEl = document.getElementById('clienteId');
+                if (cIdEl) cIdEl.value = clientId;
+                await window.loadVehiculos();
+                const vIdEl = document.getElementById('vehiculoId');
+                if (vIdEl) vIdEl.value = event.extendedProps.vehiculoId;
+            }
+            if (appointmentModal) appointmentModal.show();
+        };
+
+        window.saveAppointment = async function() {
+            const form = document.getElementById('appointmentForm');
+            if (!form || !form.checkValidity()) { if(form) form.reportValidity(); return; }
+            const formData = new FormData(form);
+            const payload = {};
+            formData.forEach((value, key) => {
+                if (key === 'Id' && !value) { payload[key] = '00000000-0000-0000-0000-000000000000'; }
+                else if (!isNaN(value) && value !== '' && key !== 'MechanicId') { payload[key] = Number(value); }
+                else { payload[key] = value; }
+            });
+            payload.StartDateTime = document.getElementById('startDateTime').value;
+            payload.EndDateTime = document.getElementById('endDateTime').value;
+            const response = await fetch('/Agenda/SaveAppointment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.success) {
+                if (appointmentModal) appointmentModal.hide();
+                if (calendar) calendar.refetchEvents();
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', result.message, 'error');
+            }
+        };
+
+        window.updateAppointmentTime = async function(event) {
+            const payload = {
+                id: event.id,
+                mechanicId: event.getResources()[0]?.id,
+                startDateTime: event.startStr,
+                endDateTime: event.endStr,
+                serviceType: event.extendedProps.serviceType,
+                status: event.extendedProps.status
+            };
+            const response = await fetch('/Agenda/SaveAppointment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!result.success) {
+                if (calendar) calendar.refetchEvents();
+                if (typeof Swal !== 'undefined') Swal.fire('Error', result.message, 'error');
+            }
+        };
+
+        window.convertToOrder = async function() {
+            const id = document.getElementById('appointmentId').value;
+            let confirmed = true;
+            if (typeof Swal !== 'undefined') {
+                const result = await Swal.fire({
+                    title: '¿Convertir a Orden?',
+                    text: 'Se creará una nueva orden de servicio y se marcará la cita como completada.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, crear orden'
+                });
+                confirmed = result.isConfirmed;
+            }
+            if (confirmed) {
+                const res = await fetch('/Agenda/ConvertToOrder?id=' + id, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    if (appointmentModal) appointmentModal.hide();
+                    if (calendar) calendar.refetchEvents();
+                    setTimeout(() => window.location.href = '/Ordenes/Detalle/' + data.orderId, 1500);
+                } else if (typeof Swal !== 'undefined') {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            }
+        };
+
+        window.loadVehiculos = async function() {
+            const clienteId = document.getElementById('clienteId').value;
+            const select = document.getElementById('vehiculoId');
+            if (!select) return;
+            select.innerHTML = '<option value="">Cargando...</option>';
+            if (!clienteId) return;
+            const res = await fetch('/Agenda/GetVehiculos?clienteId=' + clienteId);
+            const data = await res.json();
+            select.innerHTML = data.length ? '' : '<option value="">No hay vehículos registrados</option>';
+            data.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.id; opt.innerText = v.descripcion; select.appendChild(opt);
+            });
+        };
+
+        window.calculateEndTime = function() {
+            const start = document.getElementById('startDateTime').value;
+            const durationEl = document.getElementById('estimatedDuration');
+            const duration = durationEl ? parseInt(durationEl.value) : 0;
+            if (!start || isNaN(duration)) return;
+            const startDate = new Date(start);
+            const endDate = new Date(startDate.getTime() + duration * 60000);
+            const yyyy = endDate.getFullYear();
+            const mm = String(endDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(endDate.getDate()).padStart(2, '0');
+            const hh = String(endDate.getHours()).padStart(2, '0');
+            const min = String(endDate.getMinutes()).padStart(2, '0');
+            const edt = document.getElementById('endDateTime');
+            if (edt) edt.value = yyyy + '-' + mm + '-' + dd + 'T' + hh + ':' + min;
+        };
+
+        window.editAppointmentFromList = function(id) {
+            if (calendar) {
+                const event = calendar.getEventById(id);
+                if (event) window.editAppointment(event);
+            }
+        };
+    })();
 </script>

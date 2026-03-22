@@ -28,6 +28,19 @@ public class ClientesController : Controller
         return View(paginado);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> BuscarJson(string q)
+    {
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return Json(new List<object>());
+
+        var clientes = await _clienteService.GetAllAsync(q);
+        return Json(clientes.Select(c => new { 
+            id = c.Id, 
+            text = $"{c.NombreCompleto} {(c.Cedula != null ? "— " + c.Cedula : "")}" 
+        }));
+    }
+
     public IActionResult Crear() => View(new ClienteDto());
 
     [HttpPost, ValidateAntiForgeryToken]

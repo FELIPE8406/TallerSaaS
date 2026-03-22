@@ -46,9 +46,9 @@ public class OrdenService
 
     public async Task<PagedResult<OrdenDto>> GetAllPagedAsync(int pageNumber, int pageSize, EstadoOrden? estado = null)
     {
-        var query = _db.Ordenes
+        var query = _db.Ordenes.AsNoTracking()
             .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
-            .Include(o => o.Items)
+            // .Include(o => o.Items) // REMOVED: redundant for list view, items aren't shown in grid
             .AsQueryable();
 
         if (estado.HasValue)
@@ -69,15 +69,14 @@ public class OrdenService
     /// <summary>Non-paginated overload kept for internal use (e.g. FacturasController).</summary>
     public async Task<List<OrdenDto>> GetAllAsync(EstadoOrden? estado = null)
     {
-        var query = _db.Ordenes
+        var query = _db.Ordenes.AsNoTracking()
             .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
-            .Include(o => o.Items)
             .AsQueryable();
 
         if (estado.HasValue)
             query = query.Where(o => o.Estado == estado.Value);
 
-        var ordenes = await query.OrderByDescending(o => o.FechaEntrada).ToListAsync();
+        var ordenes = await query.OrderByDescending(o => o.FechaEntrada).Take(100).ToListAsync();
         return ordenes.Select(MapToDto).ToList();
     }
 
@@ -85,6 +84,7 @@ public class OrdenService
     {
         var orden = await _db.Ordenes
             .IgnoreQueryFilters()   // bypass TenantId filter — auth already validated by controller
+            .AsNoTracking()
             .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
             .Include(o => o.Items).ThenInclude(i => i.ProductoInventario)
             .FirstOrDefaultAsync(o => o.Id == id);

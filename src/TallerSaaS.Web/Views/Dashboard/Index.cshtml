@@ -87,7 +87,7 @@
 
     <!-- Ventas del Mes COP -->
     <a asp-controller="Reportes" asp-action="VentasExcel" class="kpi-glass text-decoration-none">
-        <div class="kpi-glass-icon" style="--icon-bg:rgba(0,102,204,.08);--icon-color:#0066CC;">
+        <div class="kpi-glass-icon" style="--icon-bg:rgba(0,214,50,.08);--icon-color:#00d632;">
             <i class="bi bi-cash-stack"></i>
         </div>
         <div class="kpi-glass-body">
@@ -183,8 +183,8 @@
     <div class="dash-section-label">Acciones Rápidas</div>
     <div class="dash-quick-grid">
 
-        <a asp-controller="Ordenes" asp-action="Crear" class="dash-quick-btn" data-color="#0066CC">
-            <div class="dash-quick-icon" style="background:#EBF4FF;color:#0066CC;">
+        <a asp-controller="Ordenes" asp-action="Crear" class="dash-quick-btn" data-color="#00d632">
+            <div class="dash-quick-icon" style="background:#E8FCEB;color:#00d632;">
                 <i class="bi bi-file-earmark-plus"></i>
             </div>
             <div>
@@ -443,7 +443,7 @@
     z-index: 1;
     transition: color .2s;
 }
-.kpi-glass:hover .kpi-glass-arrow { color: #0066CC; }
+.kpi-glass:hover .kpi-glass-arrow { color: #00d632; }
 
 /* ── Glass Card (generic, used in Facturas / Timeline views) ── */
 .glass-card {
@@ -557,7 +557,7 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0,0,0,.06);
 }
-.dash-quick-btn:hover .dash-quick-name { color: #0066CC; }
+.dash-quick-btn:hover .dash-quick-name { color: #00d632; }
 .dash-quick-icon {
     width: 38px;
     height: 38px;
@@ -580,154 +580,14 @@
 }
 </style>
 
-<!-- ════════════════════════════════════════════════════════════
-     CHART.JS — Gradient Charts
-════════════════════════════════════════════════════════════════ -->
-@section Scripts {
 <script>
-(function () {
-  'use strict';
-
-  const flujoCajaLabels = @Html.Raw(flujoCajaLabelsJson);
-  const flujoCajaData   = @Html.Raw(flujoCajaDataJson);
-  const topServLabels   = @Html.Raw(topServLabelsJson);
-  const topServData     = @Html.Raw(topServDataJson);
-
-  Chart.defaults.font.family = "'Inter', -apple-system, sans-serif";
-  Chart.defaults.font.size   = 12;
-
-  const gridColor = 'rgba(0,0,0,0.04)';
-  const textColor = '#6E6E73';
-  const blue      = '#0066CC';
-
-  // ── A: Flujo de Caja Semanal — Area Line with gradient ────────────────────
-  const ctxA = document.getElementById('chartIngresos');
-  if (ctxA) {
-    const gradA = ctxA.getContext('2d').createLinearGradient(0, 0, 0, 220);
-    gradA.addColorStop(0,   'rgba(0,102,204,0.18)');
-    gradA.addColorStop(0.6, 'rgba(0,102,204,0.04)');
-    gradA.addColorStop(1,   'rgba(0,102,204,0)');
-
-    new Chart(ctxA, {
-      type: 'line',
-      data: {
-        labels: flujoCajaLabels,
-        datasets: [{
-          label: 'Ingresos COP',
-          data: flujoCajaData,
-          borderColor: blue,
-          backgroundColor: gradA,
-          fill: true,
-          tension: 0.45,
-          borderWidth: 2.5,
-          pointBackgroundColor: '#fff',
-          pointBorderColor: blue,
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: blue,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#fff',
-            borderColor: '#D2D2D7',
-            borderWidth: 1,
-            titleColor: '#1D1D1F',
-            bodyColor: '#3A3A3C',
-            padding: 12,
-            cornerRadius: 10,
-            callbacks: {
-              label: ctx => ' $ ' + Number(ctx.raw).toLocaleString('es-CO')
-            }
-          }
-        },
-        scales: {
-          x: {
-            grid: { color: gridColor, drawBorder: false },
-            ticks: { color: textColor }
-          },
-          y: {
-            grid: { color: gridColor, drawBorder: false },
-            ticks: {
-              color: textColor,
-              callback: v => '$ ' + (v >= 1_000_000
-                ? (v/1_000_000).toFixed(1) + 'M'
-                : v >= 1000 ? (v/1000).toFixed(0) + 'K' : v)
-            }
-          }
-        }
-      }
-    });
-  }
-
-  // ── B: Top Servicios — Horizontal Bar with gradient ───────────────────────
-  const ctxB = document.getElementById('chartServicios');
-  if (ctxB) {
-    const colors = [
-      '#0066CC','#34C759','#FF9500','#FF3B30','#6C6CFF','#5AC8FA'
-    ].slice(0, topServLabels.length);
-
-    const gradients = colors.map(hex => {
-      const g = ctxB.getContext('2d').createLinearGradient(0, 0, 300, 0);
-      g.addColorStop(0, hex);
-      g.addColorStop(1, hex + '60');
-      return g;
-    });
-
-    new Chart(ctxB, {
-      type: 'bar',
-      data: {
-        labels: topServLabels,
-        datasets: [{
-          label: 'Solicitudes',
-          data: topServData,
-          backgroundColor: gradients,
-          borderRadius: 6,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#fff',
-            borderColor: '#D2D2D7',
-            borderWidth: 1,
-            titleColor: '#1D1D1F',
-            bodyColor: '#3A3A3C',
-            padding: 10,
-            cornerRadius: 10,
-          }
-        },
-        scales: {
-          x: {
-            grid: { color: gridColor, drawBorder: false },
-            ticks: { color: textColor, stepSize: 1 }
-          },
-          y: {
-            grid: { display: false },
-            ticks: {
-              color: '#1D1D1F',
-              font: { weight: '500' },
-              callback: function(val) {
-                const lbl = this.getLabelForValue(val);
-                return lbl && lbl.length > 18 ? lbl.slice(0, 16) + '…' : lbl;
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-})();
+  window._dashData = {
+    flujoCajaLabels: @Html.Raw(flujoCajaLabelsJson),
+    flujoCajaData: @Html.Raw(flujoCajaDataJson),
+    topServLabels: @Html.Raw(topServLabelsJson),
+    topServData: @Html.Raw(topServDataJson)
+  };
 </script>
+@section Scripts {
+    <script src="/js/dashboard.js"></script>
 }

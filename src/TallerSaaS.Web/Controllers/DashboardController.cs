@@ -52,15 +52,4 @@ public class DashboardController : Controller
         return View(dashboard);
     }
 
-    // ── JSON endpoint for Chart.js (on-demand top services) ─────────────────
-    [HttpGet]
-    public async Task<IActionResult> GetChartData()
-    {
-        var dashboard = await _dashboardService.GetDashboardAsync();
-        return Json(new
-        {
-            ventasMensuales  = dashboard.VentasMensuales,
-            ordenesPorEstado = dashboard.OrdenesPorEstado
-        });
-    }
 }

@@ -22,17 +22,17 @@ public class DashboardService
         var inicioMes = new DateTime(ahora.Year, ahora.Month, 1);
 
         // ── Sequential awaits — safe with a scoped DbContext ──────────────────
-        var totalClientes   = await _db.Clientes.CountAsync(c => c.Activo);
-        var totalVehiculos  = await _db.Vehiculos.CountAsync();
-        var ordenesAbiertas = await _db.Ordenes.CountAsync(o => o.Estado != EstadoOrden.Entregado);
-        var ventasMes       = await _db.Ordenes
+        var totalClientes   = await _db.Clientes.AsNoTracking().CountAsync(c => c.Activo);
+        var totalVehiculos  = await _db.Vehiculos.AsNoTracking().CountAsync();
+        var ordenesAbiertas = await _db.Ordenes.AsNoTracking().CountAsync(o => o.Estado != EstadoOrden.Entregado);
+        var ventasMes       = await _db.Ordenes.AsNoTracking()
             .Where(o => o.FechaEntrada >= inicioMes && o.Pagada)
             .SumAsync(o => (decimal?)o.Total) ?? 0m;
 
         // ── Last 6 months: single batch read, then aggregate in-memory ────────
         // (avoids 6 sequential round-trips — one read instead of six)
         var hace6Meses = new DateTime(ahora.Year, ahora.Month, 1).AddMonths(-5);
-        var ventasRaw  = await _db.Ordenes
+        var ventasRaw  = await _db.Ordenes.AsNoTracking()
             .Where(o => o.FechaEntrada >= hace6Meses && o.Pagada)
             .Select(o => new { o.FechaEntrada, o.Total })
             .ToListAsync();
@@ -54,7 +54,7 @@ public class DashboardService
             .ToList();
 
         // ── Orders by status ──────────────────────────────────────────────────
-        var estados = await _db.Ordenes
+        var estados = await _db.Ordenes.AsNoTracking()
             .GroupBy(o => o.Estado)
             .Select(g => new EstadoOrdenConteoDto { Estado = g.Key.ToString(), Conteo = g.Count() })
             .ToListAsync();
@@ -73,7 +73,7 @@ public class DashboardService
             .ToListAsync();
 
         // ── Facturas electrónicas pendientes de envío a la DIAN ───────────────
-        var facturasPendientesDian = await _db.Facturas
+        var facturasPendientesDian = await _db.Facturas.AsNoTracking()
             .CountAsync(f => f.TipoFacturacion == TipoFacturacion.Electronica
                           && f.EstadoEnvio     == EstadoEnvioFactura.PendienteEnvio);
 

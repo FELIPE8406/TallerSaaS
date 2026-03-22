@@ -25,14 +25,11 @@
       <!-- Cliente -->
       <div class="mb-4">
         <label class="form-label">Cliente Propietario *</label>
-        <select asp-for="ClienteId" class="form-select" required>
-          <option value="">Seleccionar cliente...</option>
-          @foreach (var c in clientes)
-          {
-            <option value="@c.Id">@c.NombreCompleto @(c.Cedula != null ? $"— {c.Cedula}" : "")</option>
-          }
-        </select>
+        <input type="text" class="form-control" id="clienteSearch" placeholder="Buscar cliente por nombre o cédula..." 
+               data-search-url="/Clientes/BuscarJson" data-target-id="ClienteId" required />
+        <input type="hidden" asp-for="ClienteId" />
         <span asp-validation-for="ClienteId" class="text-danger" style="font-size:12px;"></span>
+        <small class="text-muted">Empieza a escribir el nombre del cliente para seleccionarlo.</small>
       </div>
 
       <hr class="section-divider" />

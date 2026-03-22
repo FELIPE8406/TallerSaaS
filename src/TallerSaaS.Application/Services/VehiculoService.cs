@@ -29,35 +29,92 @@ public class VehiculoService
     // ── Queries ───────────────────────────────────────────────────────────────
     public async Task<PagedResult<VehiculoDto>> GetAllPagedAsync(int pageNumber, int pageSize, Guid? clienteId = null)
     {
-        var query = _db.Vehiculos.Include(v => v.Cliente).AsQueryable();
+        var query = _db.Vehiculos.AsNoTracking().AsQueryable();
         if (clienteId.HasValue)
             query = query.Where(v => v.ClienteId == clienteId.Value);
             
-        var orderedQuery = query.OrderBy(v => v.Marca).ThenBy(v => v.Modelo);
-        var paged = await orderedQuery.ToPagedListAsync(pageNumber, pageSize);
+        var paged = await query.OrderByDescending(v => v.FechaRegistro)
+            .Select(v => new VehiculoDto
+            {
+                Id          = v.Id,
+                ClienteId   = v.ClienteId,
+                ClienteNombre = v.Cliente != null ? v.Cliente.NombreCompleto : string.Empty,
+                Marca       = v.Marca,
+                Modelo      = v.Modelo,
+                Anio        = v.Anio,
+                Placa       = v.Placa,
+                VIN         = v.VIN,
+                Color       = v.Color,
+                Kilometraje = v.Kilometraje
+            })
+            .ToPagedListAsync(pageNumber, pageSize);
         
-        return new PagedResult<VehiculoDto>
-        {
-            Data = paged.Data.Select(Map).ToList(),
-            TotalCount = paged.TotalCount,
-            PageNumber = paged.PageNumber,
-            PageSize = paged.PageSize
-        };
+        return paged;
     }
 
-    public async Task<List<VehiculoDto>> GetAllAsync(Guid? clienteId = null)
+    public async Task<List<VehiculoDto>> GetAllAsync(Guid? clienteId = null, string? buscar = null)
     {
-        var query = _db.Vehiculos.Include(v => v.Cliente).AsQueryable();
+        var query = _db.Vehiculos.AsNoTracking().AsQueryable();
         if (clienteId.HasValue)
             query = query.Where(v => v.ClienteId == clienteId.Value);
 
-        var list = await query.OrderBy(v => v.Marca).ThenBy(v => v.Modelo).ToListAsync();
-        return list.Select(Map).ToList();
+        if (!string.IsNullOrEmpty(buscar))
+        {
+            buscar = buscar.Trim().ToLower();
+            query = query.Where(v => v.Placa!.ToLower().Contains(buscar) || 
+                                     v.Marca.ToLower().Contains(buscar) || 
+                                     v.Modelo.ToLower().Contains(buscar));
+        }
+
+        // Limit results for lookups
+        if (string.IsNullOrEmpty(buscar) && !clienteId.HasValue)
+            query = query.Take(50);
+
+        return await query.OrderByDescending(v => v.FechaRegistro)
+            .Select(v => new VehiculoDto
+            {
+                Id          = v.Id,
+                ClienteId   = v.ClienteId,
+                ClienteNombre = v.Cliente != null ? v.Cliente.NombreCompleto : string.Empty,
+                Marca       = v.Marca,
+                Modelo      = v.Modelo,
+                Anio        = v.Anio,
+                Placa       = v.Placa,
+                VIN         = v.VIN,
+                Color       = v.Color,
+                Kilometraje = v.Kilometraje
+            })
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Returns the top N vehicles ordered by registration date (most recent first).
+    /// Pushes Take(count) to SQL — ideal for dropdown population
+    /// without fetching the entire table into memory.
+    /// </summary>
+    public async Task<List<VehiculoDto>> GetTopAsync(int count = 20)
+    {
+        return await _db.Vehiculos.AsNoTracking()
+            .OrderByDescending(v => v.FechaRegistro)
+            .Take(count)
+            .Select(v => new VehiculoDto
+            {
+                Id          = v.Id,
+                ClienteId   = v.ClienteId,
+                ClienteNombre = v.Cliente != null ? v.Cliente.NombreCompleto : string.Empty,
+                Marca       = v.Marca,
+                Modelo      = v.Modelo,
+                Anio        = v.Anio,
+                Placa       = v.Placa,
+                VIN         = v.VIN,
+                Color       = v.Color,
+                Kilometraje = v.Kilometraje
+            }).ToListAsync();
     }
 
     public async Task<VehiculoDto?> GetByIdAsync(Guid id)
     {
-        var v = await _db.Vehiculos.Include(v => v.Cliente).FirstOrDefaultAsync(v => v.Id == id);
+        var v = await _db.Vehiculos.AsNoTracking().Include(v => v.Cliente).FirstOrDefaultAsync(v => v.Id == id);
         return v == null ? null : Map(v);
     }
 

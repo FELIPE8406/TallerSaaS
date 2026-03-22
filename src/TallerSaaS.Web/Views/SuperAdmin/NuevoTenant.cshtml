@@ -32,7 +32,7 @@
             <!-- ── Bloque 1: Datos del Taller ─────────────────────────────── -->
             <div class="nt-card mb-4">
                 <div class="nt-card-header">
-                    <span class="nt-card-badge" style="background:#EBF4FF;color:#0066CC;">
+                    <span class="nt-card-badge" style="background:#E8FCEB;color:#00d632;">
                         <i class="bi bi-buildings me-1"></i>1
                     </span>
                     <div>
@@ -207,7 +207,7 @@
                             <span>Facturación</span><strong>Mensual</strong>
                         </div>
                         <div class="nt-breakdown-row nt-breakdown-total">
-                            <span>Total / mes</span><strong id="psTotalB" style="color:#0066CC;"></strong>
+                            <span>Total / mes</span><strong id="psTotalB" style="color:#00d632;"></strong>
                         </div>
                     </div>
                 </div>
@@ -218,7 +218,7 @@
                 <div class="nt-card-title mb-3" style="font-size:13px;">Comparación de Planes</div>
                 @foreach (var p in planesData)
                 {
-                    var accent = p.Id == 1 ? "#0066CC" : p.Id == 2 ? "#34C759" : "#FF9500";
+                    var accent = p.Id == 1 ? "#00d632" : p.Id == 2 ? "#34C759" : "#FF9500";
                     <div class="nt-plan-row" style="--plan-accent:@accent">
                         <div class="nt-plan-dot" style="background:@accent;"></div>
                         <div class="flex-1">
@@ -295,7 +295,7 @@
     font-size: 13px;
 }
 .nt-plan-hero {
-    background: linear-gradient(135deg, #0066CC 0%, #0055AA 100%);
+    background: linear-gradient(135deg, #00d632 0%, #00b32a 100%);
     padding: 24px;
     text-align: center;
     color: #fff;

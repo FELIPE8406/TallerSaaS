@@ -197,7 +197,6 @@ C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\D
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\scopedcss\Views\Shared\_Layout.cshtml.rz.scp.css
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\scopedcss\bundle\TallerSaaS.Web.styles.css
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\scopedcss\projectbundle\TallerSaaS.Web.bundle.scp.css
-C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\sgyh3b1asq-lxp399s2lf.gz
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\qsaczw33jy-61n19gt1b8.gz
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\q0vi2lvtl9-bqjiyaj88i.gz
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\snxw4a3mw4-c2jlpeoesf.gz
@@ -274,6 +273,16 @@ C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\D
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\staticwebassets.build.json.cache
-C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\g6cf9vq5u3-5jm1sp75yf.gz
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\x19chrlcxu-708044ot0e.gz
-C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\fgn2htxlgq-q98z5xcicz.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.Google.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.MicrosoftAccount.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\5uupmzm8tw-bpqk13agn9.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\qd87zypiby-pxwfne68kh.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\ys2ykrx2ak-asrnl4e7qs.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\it7dyt922v-kkqc8c98c6.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\dv5z5ojko2-hcncrmn1sk.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\d1cyksfb2m-vkkkpfo5px.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\g6cf9vq5u3-fozvpcc0xm.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\sgyh3b1asq-2yq91v19fc.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\97vj25umpb-evyogv015o.gz

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using TallerSaaS.Infrastructure.Data;
 
 namespace TallerSaaS.Web.Controllers;
@@ -27,7 +29,12 @@ public class AccountController : Controller
     public async Task<IActionResult> Login(string email, string password,
                                            bool rememberMe = false, string? returnUrl = null)
     {
-        var user = await _userManager.FindByEmailAsync(email);
+        // Usamos IgnoreQueryFilters para evitar problemas de timeout/filtros durante el login 
+        // y cargamos explícitamente el Tenant para verificar el plan.
+        var user = await _userManager.Users
+            .Include(u => u.Tenant)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Email == email);
         if (user == null || !user.Activo)
         {
             TempData["Error"] = "Credenciales inválidas o cuenta inactiva.";
@@ -41,12 +48,18 @@ public class AccountController : Controller
                                                               lockoutOnFailure: true);
         if (result.Succeeded)
         {
+            if (user.EsSuperAdmin) return RedirectToAction("Index", "SuperAdmin");
+
+            // Si no tiene plan activo, enviarlo a elegir uno
+            if (user.TenantId == null || user.Tenant?.PlanSuscripcionId == null)
+            {
+                return RedirectToAction("Index", "Subscription");
+            }
+
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
 
-            return user.EsSuperAdmin
-                ? RedirectToAction("Index", "SuperAdmin")
-                : RedirectToAction("Index", "Dashboard");
+            return RedirectToAction("Index", "Dashboard");
         }
 
         TempData["Error"] = result.IsLockedOut
@@ -63,6 +76,64 @@ public class AccountController : Controller
         HttpContext.Session.Remove("ImpersonatedTenantNombre");
         await _signInManager.SignOutAsync();
         return RedirectToAction("Login");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ExternalLogin(string provider, string? returnUrl = null)
+    {
+        var redirectUrl = Url.Action("ExternalLoginCallback", "Account", new { returnUrl });
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+        return new ChallengeResult(provider, properties);
+    }
+
+    public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
+    {
+        returnUrl ??= Url.Content("~/");
+        if (remoteError != null)
+        {
+            TempData["Error"] = $"Error del proveedor externo: {remoteError}";
+            return RedirectToAction("Login", new { returnUrl });
+        }
+
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null)
+        {
+            TempData["Error"] = "Error al obtener información del login externo.";
+            return RedirectToAction("Login", new { returnUrl });
+        }
+
+        var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+        if (result.Succeeded)
+        {
+            var user = await _userManager.Users
+                .Include(u => u.Tenant)
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.Email == info.Principal.FindFirstValue(ClaimTypes.Email));
+            
+            if (user != null && !user.EsSuperAdmin && (user.TenantId == null || user.Tenant?.PlanSuscripcionId == null))
+            {
+                return RedirectToAction("Index", "Subscription");
+            }
+            return LocalRedirect(returnUrl);
+        }
+
+        // Si el usuario no tiene cuenta, podrías crear una automáticamente o pedir registro.
+        // Aquí intentamos buscar por email para vincular cuentas existentes.
+        var email = info.Principal.FindFirstValue(System.Security.Claims.ClaimTypes.Email);
+        if (email != null)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user != null)
+            {
+                await _userManager.AddLoginAsync(user, info);
+                await _signInManager.SignInAsync(user, isPersistent: false);
+                return LocalRedirect(returnUrl);
+            }
+        }
+
+        TempData["Error"] = "Usuario no registrado en el sistema.";
+        return RedirectToAction("Login", new { returnUrl });
     }
 
     [HttpGet]

@@ -25,25 +25,32 @@ public class InventarioService
         if (!string.IsNullOrEmpty(categoria))
             query = query.Where(p => p.Categoria == categoria);
 
-        var orderedQuery = query.OrderBy(p => p.Nombre);
-        var paged = await orderedQuery.ToPagedListAsync(pageNumber, pageSize);
+        var paged = await query.OrderBy(p => p.Nombre)
+            .Select(p => new
+            {
+                p.Id, p.Nombre, p.SKU, p.Descripcion, p.Categoria, p.Stock, p.StockMinimo,
+                p.PrecioCompra, p.PrecioVenta, p.Proveedor, p.BodegaId,
+                BodegaNombre = p.Bodega != null ? p.Bodega.Nombre : null,
+                p.TipoItem
+            })
+            .ToPagedListAsync(pageNumber, pageSize);
 
         return new PagedResult<InventarioDto>
         {
+            TotalCount = paged.TotalCount,
+            PageNumber = paged.PageNumber,
+            PageSize = paged.PageSize,
             Data = paged.Data.Select(p => new InventarioDto
             {
                 Id = p.Id, Nombre = p.Nombre, SKU = p.SKU, Descripcion = p.Descripcion,
                 Categoria = p.Categoria, Stock = p.Stock, StockMinimo = p.StockMinimo,
                 PrecioCompra = p.PrecioCompra, PrecioVenta = p.PrecioVenta, Proveedor = p.Proveedor,
                 BodegaId = p.BodegaId,
-                BodegaNombre = p.Bodega != null ? p.Bodega.Nombre : null,
+                BodegaNombre = p.BodegaNombre,
                 TipoItem = p.TipoItem == TipoItemProducto.Servicio ? "Servicio" : "Refaccion",
                 NivelStock = p.Stock <= 0 ? "Agotado" : p.Stock <= p.StockMinimo ? "Bajo" : "OK",
                 NivelStockClase = p.Stock <= 0 ? "danger" : p.Stock <= p.StockMinimo ? "warning" : "success"
-            }).ToList(),
-            TotalCount = paged.TotalCount,
-            PageNumber = paged.PageNumber,
-            PageSize = paged.PageSize
+            }).ToList()
         };
     }
 
@@ -106,8 +113,9 @@ public class InventarioService
     public async Task<List<ProductoBusquedaDto>> BuscarAsync(string query, string? tipo = null)
     {
         var q = _db.Inventario
+            .AsNoTracking()
             .Include(p => p.Bodega)
-            .Where(p => p.Activo && p.Nombre.Contains(query));
+            .Where(p => p.Activo && (p.Nombre.Contains(query) || (p.SKU != null && p.SKU.Contains(query))));
 
         if (tipo == "Servicio")
             q = q.Where(p => p.TipoItem == TipoItemProducto.Servicio);

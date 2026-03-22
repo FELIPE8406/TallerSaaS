@@ -1,0 +1,166 @@
+@{ ViewData["Title"] = "Gestión de Personal"; }
+
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Maestro de Empleados</h1>
+            <p class="text-muted">Configura salarios base y esquemas de comisiones para la Nómina Electrónica.</p>
+        </div>
+        <div>
+            <div class="text-end mb-2">
+                <span class="badge bg-info text-dark">Límite del Plan: @ViewBag.ActiveCount / @ViewBag.PlanLimit</span>
+            </div>
+            @if (ViewBag.LimiteAlcanzado)
+            {
+                <button class="btn btn-secondary" disabled title="Has alcanzado el límite de empleados activos de tu plan actual.">
+                    <i class="fas fa-plus"></i> Agregar Empleado
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-primary shadow-sm btn-abrir-nuevo-empleado">
+                    <i class="fas fa-plus"></i> Agregar Empleado
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Nombre Completo</th>
+                            <th>Rol Sistema</th>
+                            <th>Tipo Empleado</th>
+                            <th>Salario Base</th>
+                            <th>Comisión (%)</th>
+                            <th>Estado Nómina</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="personal-body">
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <div class="spinner-border spinner-border-sm me-2 text-primary"></div> Cargando personal...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configurar Contrato -->
+<div class="modal fade" id="modalConfigurarContrato" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configurar Contrato - <span id="modalEmpName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formContrato">
+                    <input type="hidden" id="empUserId" />
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Empleado (Diferenciación Nómina)</label>
+                        <select class="form-select" id="empTipo">
+                            <option value="Mecanico">Mecánico (Conteo de Órdenes)</option>
+                            <option value="Admin">Administrativo (Sueldo Fijo)</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Salario Base (Mes)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="empSalario" required min="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Comisión Mano de Obra</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="empComision" required min="0" max="100" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL del Contrato en PDF</label>
+                        <input type="url" class="form-control" id="empUrlPdf" placeholder="https://drive.google.com/su-contrato.pdf" />
+                        <small class="text-muted">Enlace al archivo físico escaneado (Opcional por ahora).</small>
+                    </div>
+                    <div class="form-check form-switch mt-4">
+                        <input class="form-check-input" type="checkbox" id="empActivo" checked>
+                        <label class="form-check-label fw-bold" for="empActivo">Incluir en Nómina Electrónica</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-guardar-contrato">Guardar Contrato</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Empleado -->
+<div class="modal fade" id="modalNuevoEmpleado" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Empleado a Nómina</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Selecciona un usuario registrado en el sistema que aún no tenga configuración de nómina.</p>
+                <form id="formNuevoContrato">
+                    <div class="mb-3">
+                        <label class="form-label">Usuario del Dominio</label>
+                        <select class="form-select" id="newEmpUserId">
+                            <option value="">-- Seleccionar Usuario --</option>
+                            @foreach (var unconf in ViewBag.UnconfiguredUsers as IEnumerable<dynamic>)
+                            {
+                                <option value="@unconf.Id">@unconf.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Empleado (Diferenciación Nómina)</label>
+                        <select class="form-select" id="newEmpTipo">
+                            <option value="Mecanico">Mecánico (Conteo de Órdenes)</option>
+                            <option value="Admin">Administrativo (Sueldo Fijo)</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Salario Base (Mes)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="newEmpSalario" required value="1300000" min="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Comisión Mano de Obra</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="newEmpComision" required value="10" min="0" max="100" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL del Contrato en PDF</label>
+                        <input type="url" class="form-control" id="newEmpUrlPdf" placeholder="https://drive.google.com/su-contrato.pdf" />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-guardar-nuevo-contrato">Crear Contrato</button>
+            </div>
+        </div>
+    </div>
+</div>
+

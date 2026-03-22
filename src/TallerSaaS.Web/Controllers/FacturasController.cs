@@ -34,6 +34,20 @@ public class FacturasController : Controller
         return View(facturas);
     }
 
+    // ── AJAX: Listado paginado de Facturas ────────────────────────────────────
+    [HttpGet]
+    public async Task<IActionResult> GetPaged(int page = 1, int size = 10)
+    {
+        var paged = await _facturaService.GetPagedAsync(page, size);
+        return Json(new
+        {
+            items       = paged.Data,
+            totalPages  = paged.TotalPages,
+            currentPage = paged.PageNumber,
+            totalCount  = paged.TotalCount
+        });
+    }
+
     // ── Nueva Factura — selección de órdenes ──────────────────────────────────
     public async Task<IActionResult> Nueva()
     {

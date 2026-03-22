@@ -9,8 +9,8 @@
   color-scheme: light;
   /* Prevent OS dark-mode bleed-through */
   /* ── Brand & Semantic Colors ── */
-  --primary: #0066CC;
-  --primary-hover: #0055AA;
+  --primary: #00d632;
+  --primary-hover: #00b32a;
   --accent: #34C759;
   --danger: #FF3B30;
   --warning: #FF9500;
@@ -31,8 +31,8 @@
   --sidebar-bg: #FFFFFF;
   --sidebar-border: #D2D2D7;
   --sidebar-text: #3A3A3C;
-  --sidebar-active-bg: #F0F6FF;
-  --sidebar-active: #0066CC;
+  --sidebar-active-bg: #E8FCEB;
+  --sidebar-active: #00d632;
   /* ── Misc ── */
   --topbar-bg: #FFFFFF;
   --radius: 12px;
@@ -470,8 +470,8 @@ body {
 
 /* ── Status Badges ───────────────────────────────────────────────────────── */
 .badge-recibido {
-  background: #EBF2FF;
-  color: #0055AA;
+  background: #E8FCEB;
+  color: #00b32a;
 }
 
 .badge-reparacion {
@@ -556,7 +556,7 @@ body {
 .form-control:focus,
 .form-select:focus {
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(0, 214, 50, 0.12) !important;
   outline: none !important;
 }
 

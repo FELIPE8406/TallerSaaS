@@ -1,3 +1,5 @@
 @{
-    Layout = (ViewData["IsAjaxRequest"] as bool? == true) ? null : "~/Views/Shared/_Layout.cshtml";
+    // Always render the layout, even for AJAX SPA requests.
+    // This ensures @section Scripts are rendered and can be extracted by site.js.
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }

@@ -21,6 +21,7 @@ public class ReporteService
         try
         {
             var orden = await _db.Ordenes
+                .AsNoTracking()
                 .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.Id == ordenId)
@@ -53,6 +54,7 @@ public class ReporteService
         try
         {
             var factura = await _db.Facturas
+                .AsNoTracking()
                 .Include(f => f.Ordenes).ThenInclude(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
                 .Include(f => f.Ordenes).ThenInclude(o => o.Items)
                 .FirstOrDefaultAsync(f => f.Id == facturaId)
@@ -305,6 +307,7 @@ public class ReporteService
         try
         {
             var query = _db.Clientes
+                .AsNoTracking()
                 .Include(c => c.Vehiculos)
                 .Where(c => c.Activo);
 
@@ -362,6 +365,7 @@ public class ReporteService
             hasta ??= TimeZoneHelper.FinDeDia(TimeZoneHelper.AhoraLocal());
 
             var ordenes = await _db.Ordenes
+                .AsNoTracking()
                 .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
                 .Where(o => o.FechaEntrada >= desde && o.FechaEntrada <= hasta)
                 .OrderByDescending(o => o.FechaEntrada)
@@ -423,6 +427,7 @@ public class ReporteService
         try
         {
             var query = _db.Facturas
+                .AsNoTracking()
                 .Include(f => f.Ordenes)
                 .AsQueryable();
 

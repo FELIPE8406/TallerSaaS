@@ -22,15 +22,23 @@ public class VehiculosController : Controller
         _tenantService   = tenantService;
     }
 
-    // ── Index ─────────────────────────────────────────────────────────────────
-    public async Task<IActionResult> Index()
+    public IActionResult Index()
     {
-        ViewBag.Clientes = await _clienteService.GetAllAsync();
         return View();
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPaged(int page = 1, int size = 10, Guid? clienteId = null)
+    public async Task<IActionResult> BuscarJson(string q, Guid? clienteId = null)
+    {
+        var vehiculos = await _vehiculoService.GetAllAsync(clienteId, q);
+        return Json(vehiculos.Select(v => new {
+            id = v.Id,
+            text = $"{v.Marca} {v.Modelo} ({v.Placa ?? "SIN PLACA"})"
+        }));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetPaged(int page = 1, int size = 20, Guid? clienteId = null)
     {
         var result = await _vehiculoService.GetAllPagedAsync(page, size, clienteId);
         return Json(result);
@@ -90,6 +98,7 @@ public class VehiculosController : Controller
     // ── Private ───────────────────────────────────────────────────────────────
     private async Task PopularClientes()
     {
-        ViewBag.Clientes = await _clienteService.GetAllAsync();
+        // Push Take(20) to SQL — no full table scan needed for dropdowns
+        ViewBag.Clientes = await _clienteService.GetTopAsync(20);
     }
 }

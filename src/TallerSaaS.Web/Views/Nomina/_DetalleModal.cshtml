@@ -1,0 +1,66 @@
+@model TallerSaaS.Domain.Entities.NominaRegistro
+
+<div class="modal-header border-0 pb-0">
+    <div>
+        <h5 class="modal-title fw-bold mb-0">Detalle de Nómina</h5>
+        <small class="text-muted"><i class="bi bi-shop me-1"></i>@ViewBag.TenantNombre - @ViewBag.TenantNIT</small>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body p-4">
+    <div class="text-center mb-4">
+        <div class="user-avatar mx-auto mb-2" style="width: 60px; height: 60px; font-size: 1.5rem;">
+            @(ViewBag.EmpleadoNombre?.Substring(0, 1).ToUpper() ?? "U")
+        </div>
+        <h4 class="mb-0 fw-bold">@ViewBag.EmpleadoNombre</h4>
+        <span class="badge bg-light text-muted border mt-1">Período: @Model.Periodo</span>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 text-center">
+            <div class="p-3 bg-light rounded-4 h-100">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Ingresos</div>
+                <div class="fs-5 fw-bold text-success">$@((Model.SalarioBase + Model.Comisiones).ToString("N0"))</div>
+            </div>
+        </div>
+        <div class="col-6 text-center">
+            <div class="p-3 bg-light rounded-4 h-100">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Deducciones</div>
+                <div class="fs-5 fw-bold text-danger">$@Model.Deducciones.ToString("N0")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="list-group list-group-flush mb-4 rounded-4 border overflow-hidden">
+        <div class="list-group-item d-flex justify-content-between py-3">
+            <span>Salario Base</span>
+            <span class="fw-bold">$@Model.SalarioBase.ToString("N0")</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between py-3">
+            <span>Comisiones (10% Servicios)</span>
+            <span class="fw-bold text-success">+$@Model.Comisiones.ToString("N0")</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between py-3">
+            <span>Deducciones</span>
+            <span class="fw-bold text-danger">-$@Model.Deducciones.ToString("N0")</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between py-3 bg-light fw-bold fs-5">
+            <span>Total Neto</span>
+            <span class="text-primary">$@Model.TotalNeto.ToString("N0")</span>
+        </div>
+    </div>
+
+    <div class="alert alert-info border-0 rounded-4 p-3 small">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        Este cálculo es preliminar (**Borrador**). Al reportar a la DIAN, el registro se bloqueará.
+    </div>
+</div>
+<div class="modal-footer border-0 pt-0">
+    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+    @if (Model.Estado == TallerSaaS.Domain.Enums.NominaStatus.Draft)
+    {
+        <button type="button" class="btn btn-primary px-4" onclick="reportarDian('@Model.Id')">
+            <i class="bi bi-send-fill me-1"></i>Reportar a DIAN
+        </button>
+    }
+</div>

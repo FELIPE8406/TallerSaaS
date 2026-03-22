@@ -28,9 +28,12 @@ public interface IApplicationDbContext
     DbSet<AsientoContable> AsientosContables { get; }
     DbSet<LineaAsientoContable> LineasAsientosContables { get; }
 
-    // Agenda Module
     DbSet<Appointment> Appointments { get; }
     DbSet<MechanicAvailability> MechanicAvailabilities { get; }
+
+    // Payroll Module
+    DbSet<NominaRegistro> NominaRegistros { get; }
+    DbSet<EmpleadoContrato> EmpleadoContratos { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

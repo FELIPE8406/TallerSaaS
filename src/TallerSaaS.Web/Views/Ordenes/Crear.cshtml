@@ -33,24 +33,17 @@
 
           <div class="mb-4">
             <label class="form-label">Cliente *</label>
-            <select id="clienteSelect" class="form-select" onchange="cargarVehiculos(this.value)" required>
-              <option value="">Seleccionar cliente...</option>
-              @foreach (var c in clientes)
-              {
-                <option value="@c.Id">@c.NombreCompleto @(c.Cedula != null ? $"— {c.Cedula}" : "")</option>
-              }
-            </select>
+            <input type="text" id="clienteSearch" class="form-control" placeholder="Buscar cliente..." 
+                   data-search-url="/Clientes/BuscarJson" data-target-id="clienteIdHidden" required />
+            <input type="hidden" id="clienteIdHidden" />
           </div>
 
           <div class="mb-4">
             <label class="form-label">Vehículo *</label>
-            <select id="vehiculoSelect" asp-for="VehiculoId" class="form-select" required>
-              <option value="">Primero seleccione un cliente...</option>
-              @foreach (var v in vehiculos)
-              {
-                <option value="@v.Id" data-cliente="@v.ClienteId">@v.Descripcion — @v.Placa</option>
-              }
-            </select>
+            <input type="text" id="vehiculoSearch" class="form-control" placeholder="Primero busque un cliente..." 
+                   data-search-url="/Vehiculos/BuscarJson" data-target-id="VehiculoId" 
+                   data-depend-id="clienteIdHidden" data-depend-param="clienteId" required />
+            <input type="hidden" asp-for="VehiculoId" />
             <span asp-validation-for="VehiculoId" class="text-danger" style="font-size:12px;"></span>
           </div>
 
@@ -119,25 +112,10 @@
 @section Scripts {
   <partial name="_ValidationScriptsPartial" />
   <script>
-    const allVehicles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-      vehiculos.Select(v => new { id = v.Id, clienteId = v.ClienteId, desc = v.Descripcion, placa = v.Placa })
-    ));
-
-    function cargarVehiculos(clienteId) {
-      const sel = document.getElementById('vehiculoSelect');
-      sel.innerHTML = '<option value="">Seleccionar vehículo...</option>';
-      if (!clienteId) return;
-      const filtered = allVehicles.filter(v => v.clienteId === clienteId);
-      if (filtered.length === 0) {
-        sel.innerHTML = '<option value="">Sin vehículos registrados</option>';
-        return;
-      }
-      filtered.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v.id;
-        opt.textContent = `${v.desc} — ${v.placa ?? 'Sin placa'}`;
-        sel.appendChild(opt);
-      });
-    }
+    // Reset vehicle on client change
+    document.getElementById('clienteIdHidden').addEventListener('change', function() {
+        document.getElementById('vehiculoSearch').value = '';
+        document.getElementById('VehiculoId').value = '';
+    });
   </script>
 }

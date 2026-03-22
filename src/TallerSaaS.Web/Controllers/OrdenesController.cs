@@ -39,7 +39,7 @@ public class OrdenesController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPaged(int page = 1, int size = 10, int? estado = null)
+    public async Task<IActionResult> GetPaged(int page = 1, int size = 20, int? estado = null)
     {
         EstadoOrden? estadoEnum = estado.HasValue ? (EstadoOrden)estado.Value : null;
         var paged = await _ordenService.GetAllPagedAsync(page, size, estadoEnum);
@@ -55,8 +55,10 @@ public class OrdenesController : Controller
 
     public async Task<IActionResult> Crear()
     {
-        ViewBag.Clientes  = await _clienteService.GetAllAsync();
-        ViewBag.Vehiculos = await _vehiculoService.GetAllAsync();
+        // Optimization: push Take(20) to SQL — no full table scan.
+        // Frontend will use Buscar endpoints for the rest.
+        ViewBag.Clientes  = await _clienteService.GetTopAsync(20);
+        ViewBag.Vehiculos = await _vehiculoService.GetTopAsync(20);
         return View(new OrdenDto());
     }
 

@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.MicrosoftAccount;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
@@ -67,6 +70,19 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddDefaultTokenProviders()
 .AddClaimsPrincipalFactory<TenantClaimsFactory>();
 
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        // Se recomienda mover estos valores a appsettings.json o Secret Manager
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "TU_CLIENT_ID_GOOGLE";
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "TU_CLIENT_SECRET_GOOGLE";
+    })
+    .AddMicrosoftAccount(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? "TU_CLIENT_ID_MICROSOFT";
+        options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "TU_CLIENT_SECRET_MICROSOFT";
+    });
+
 // ─── Authentication / Authorization ──────────────────────────────────────────
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -100,6 +116,9 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<CsvExportStrategy>();
 builder.Services.AddScoped<TxtExportStrategy>();
 builder.Services.AddScoped<PdfExportStrategy>();
+builder.Services.AddScoped<IUserProvider, UserProvider>();
+builder.Services.AddScoped<INominaService, NominaService>();
+builder.Services.AddScoped<IEmpleadoContratoService, EmpleadoContratoService>();
 
 // ─── MVC — model binder uses InvariantCulture for all numeric types ───────────
 // This ensures HTML number inputs (always dot-decimal) bind correctly even when
@@ -121,6 +140,7 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
 });
 
+builder.Services.AddMemoryCache();
 builder.Services.AddDistributedMemoryCache();
 
 var app = builder.Build();

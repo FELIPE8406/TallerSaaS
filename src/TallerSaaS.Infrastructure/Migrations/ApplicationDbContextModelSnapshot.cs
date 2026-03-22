@@ -175,7 +175,7 @@ namespace TallerSaaS.Infrastructure.Migrations
 
                     b.Property<string>("MechanicId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ServiceType")
                         .IsRequired()
@@ -203,10 +203,10 @@ namespace TallerSaaS.Infrastructure.Migrations
 
                     b.HasIndex("VehiculoId");
 
-                    b.HasIndex("TenantId", "StartDateTime", "EndDateTime")
-                        .HasDatabaseName("IX_Appointments_Tenant_DateRange_Mechanic");
+                    b.HasIndex("TenantId", "MechanicId", "StartDateTime", "EndDateTime")
+                        .HasDatabaseName("IX_Appointments_Tenant_Mechanic_Dates");
 
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "StartDateTime", "EndDateTime"), new[] { "MechanicId", "Status" });
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "MechanicId", "StartDateTime", "EndDateTime"), new[] { "Status" });
 
                     b.ToTable("Appointments");
                 });
@@ -308,8 +308,8 @@ namespace TallerSaaS.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId")
-                        .HasDatabaseName("IX_Clientes_TenantId");
+                    b.HasIndex("TenantId", "FechaRegistro")
+                        .HasDatabaseName("IX_Clientes_Tenant_Date");
 
                     b.ToTable("Clientes");
                 });
@@ -348,6 +348,48 @@ namespace TallerSaaS.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("CuentasContables");
+                });
+
+            modelBuilder.Entity("TallerSaaS.Domain.Entities.EmpleadoContrato", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("FechaIngreso")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("PorcentajeComision")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("SalarioBase")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TipoEmpleado")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("URLContratoPDF")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("EmpleadoContratos");
                 });
 
             modelBuilder.Entity("TallerSaaS.Domain.Entities.EventoTrazabilidad", b =>
@@ -591,6 +633,50 @@ namespace TallerSaaS.Infrastructure.Migrations
                     b.ToTable("MovimientosInventario");
                 });
 
+            modelBuilder.Entity("TallerSaaS.Domain.Entities.NominaRegistro", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Comisiones")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<decimal>("Deducciones")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("IngresosGenerados")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Periodo")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<decimal>("SalarioBase")
+                        .HasColumnType("decimal(12,2)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Periodo", "Estado", "UserId")
+                        .HasDatabaseName("IX_NominaRegistros_Tenant_Period_Status_User");
+
+                    b.ToTable("NominaRegistros");
+                });
+
             modelBuilder.Entity("TallerSaaS.Domain.Entities.Orden", b =>
                 {
                     b.Property<Guid>("Id")
@@ -664,10 +750,10 @@ namespace TallerSaaS.Infrastructure.Migrations
 
                     b.HasIndex("FacturaId");
 
-                    b.HasIndex("TenantId")
-                        .HasDatabaseName("IX_Ordenes_TenantId");
-
                     b.HasIndex("VehiculoId");
+
+                    b.HasIndex("TenantId", "FechaEntrada", "Estado")
+                        .HasDatabaseName("IX_Ordenes_Tenant_Date_State");
 
                     b.ToTable("Ordenes");
                 });
@@ -933,8 +1019,8 @@ namespace TallerSaaS.Infrastructure.Migrations
 
                     b.HasIndex("ClienteId");
 
-                    b.HasIndex("TenantId")
-                        .HasDatabaseName("IX_Vehiculos_TenantId");
+                    b.HasIndex("TenantId", "FechaRegistro")
+                        .HasDatabaseName("IX_Vehiculos_Tenant_Date");
 
                     b.ToTable("Vehiculos");
                 });
@@ -1016,6 +1102,8 @@ namespace TallerSaaS.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
@@ -1095,6 +1183,15 @@ namespace TallerSaaS.Infrastructure.Migrations
                     b.Navigation("Tenant");
 
                     b.Navigation("Vehiculo");
+                });
+
+            modelBuilder.Entity("TallerSaaS.Domain.Entities.EmpleadoContrato", b =>
+                {
+                    b.HasOne("TallerSaaS.Infrastructure.Data.ApplicationUser", null)
+                        .WithOne("EmpleadoContrato")
+                        .HasForeignKey("TallerSaaS.Domain.Entities.EmpleadoContrato", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TallerSaaS.Domain.Entities.EventoTrazabilidad", b =>
@@ -1191,6 +1288,17 @@ namespace TallerSaaS.Infrastructure.Migrations
                     b.Navigation("Producto");
                 });
 
+            modelBuilder.Entity("TallerSaaS.Domain.Entities.NominaRegistro", b =>
+                {
+                    b.HasOne("TallerSaaS.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("TallerSaaS.Domain.Entities.Orden", b =>
                 {
                     b.HasOne("TallerSaaS.Domain.Entities.Appointment", "Appointment")
@@ -1264,6 +1372,16 @@ namespace TallerSaaS.Infrastructure.Migrations
                     b.Navigation("Cliente");
                 });
 
+            modelBuilder.Entity("TallerSaaS.Infrastructure.Data.ApplicationUser", b =>
+                {
+                    b.HasOne("TallerSaaS.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("TallerSaaS.Domain.Entities.AsientoContable", b =>
                 {
                     b.Navigation("Lineas");
@@ -1304,6 +1422,11 @@ namespace TallerSaaS.Infrastructure.Migrations
             modelBuilder.Entity("TallerSaaS.Domain.Entities.Vehiculo", b =>
                 {
                     b.Navigation("Ordenes");
+                });
+
+            modelBuilder.Entity("TallerSaaS.Infrastructure.Data.ApplicationUser", b =>
+                {
+                    b.Navigation("EmpleadoContrato");
                 });
 #pragma warning restore 612, 618
         }

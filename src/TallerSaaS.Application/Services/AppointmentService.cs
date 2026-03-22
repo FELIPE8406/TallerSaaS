@@ -35,19 +35,59 @@ public class AppointmentService : IAppointmentService
         var utcStart = TimeZoneHelper.ToUtcFromColombia(start);
         var utcEnd = TimeZoneHelper.ToUtcFromColombia(end);
 
-        // Fix: Use correct overlap logic so appointments spanning across the range are fetched
-        var appointments = await _db.Appointments
-            .Include(a => a.Cliente)
-            .Include(a => a.Vehiculo)
+        var data = await _db.Appointments
+            .AsNoTracking()
             .Where(a => a.TenantId == tenantId && a.StartDateTime <= utcEnd && a.EndDateTime >= utcStart)
+            .OrderBy(a => a.StartDateTime)
+            .Select(a => new
+            {
+                a.Id,
+                a.ClienteId,
+                ClienteNombre = a.Cliente != null ? a.Cliente.NombreCompleto : "N/A",
+                a.VehiculoId,
+                VehiculoAnio = a.Vehiculo != null ? a.Vehiculo.Anio : 0,
+                VehiculoMarca = a.Vehiculo != null ? a.Vehiculo.Marca : "",
+                VehiculoModelo = a.Vehiculo != null ? a.Vehiculo.Modelo : "",
+                VehiculoPlaca = a.Vehiculo != null ? (a.Vehiculo.Placa ?? "ND") : "ND",
+                a.MechanicId,
+                a.StartDateTime,
+                a.EndDateTime,
+                a.EstimatedDuration,
+                a.ServiceType,
+                Status = (int)a.Status,
+                a.WhatsappReminderSent
+            })
             .ToListAsync();
-
-        return appointments.Select(MapToDto).ToList();
+        
+        // Final mapping for non-translatable fields
+        return data.Select(a => new AppointmentDto {
+            Id = a.Id,
+            ClienteId = a.ClienteId,
+            ClienteNombre = a.ClienteNombre,
+            VehiculoId = a.VehiculoId,
+            VehiculoDescripcion = $"{a.VehiculoAnio} {a.VehiculoMarca} {a.VehiculoModelo} ({a.VehiculoPlaca})",
+            MechanicId = a.MechanicId,
+            StartDateTime = TimeZoneHelper.ToColombiaFromUtc(a.StartDateTime),
+            EndDateTime = TimeZoneHelper.ToColombiaFromUtc(a.EndDateTime),
+            EstimatedDuration = a.EstimatedDuration,
+            ServiceType = a.ServiceType,
+            Status = a.Status,
+            StatusTexto = ((AppointmentStatus)a.Status) switch 
+            {
+                AppointmentStatus.Confirmed => "Confirmada",
+                AppointmentStatus.CheckedIn => "En Taller",
+                AppointmentStatus.Completed => "Completada/Facturada",
+                AppointmentStatus.Cancelled => "Cancelada",
+                _ => a.Status.ToString()
+            },
+            WhatsappReminderSent = a.WhatsappReminderSent
+        }).ToList();
     }
 
     public async Task<AppointmentDto> GetAppointmentByIdAsync(Guid id)
     {
         var a = await _db.Appointments
+            .AsNoTracking()
             .Include(a => a.Cliente)
             .Include(a => a.Vehiculo)
             .FirstOrDefaultAsync(a => a.Id == id)
@@ -191,6 +231,7 @@ public class AppointmentService : IAppointmentService
     public async Task<List<MechanicAvailabilityDto>> GetMechanicAvailabilityAsync(string mechanicId)
     {
         var availabilities = await _db.MechanicAvailabilities
+            .AsNoTracking()
             .Where(m => m.MechanicId == mechanicId)
             .OrderBy(m => m.DayOfWeek)
             .ToListAsync();
@@ -240,6 +281,7 @@ public class AppointmentService : IAppointmentService
         // Fix N+1 Query: Cargar todas las reglas del mecánico una sola vez
         // en lugar de hacerlo iteración por iteración en el bucle
         var allRules = await _db.MechanicAvailabilities
+            .AsNoTracking()
             .Where(m => m.MechanicId == mechanicId)
             .ToListAsync();
             
@@ -335,7 +377,14 @@ public class AppointmentService : IAppointmentService
         EstimatedDuration = a.EstimatedDuration,
         ServiceType = a.ServiceType,
         Status = (int)a.Status,
-        StatusTexto = a.Status.ToString(),
+        StatusTexto = a.Status switch 
+        {
+            AppointmentStatus.Confirmed => "Confirmada",
+            AppointmentStatus.CheckedIn => "En Taller",
+            AppointmentStatus.Completed => "Completada/Facturada",
+            AppointmentStatus.Cancelled => "Cancelada",
+            _ => a.Status.ToString()
+        },
         WhatsappReminderSent = a.WhatsappReminderSent
     };
 }

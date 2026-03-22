@@ -37,6 +37,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     // Agenda Module
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<MechanicAvailability> MechanicAvailabilities => Set<MechanicAvailability>();
+    public DbSet<NominaRegistro> NominaRegistros => Set<NominaRegistro>();
+    public DbSet<EmpleadoContrato> EmpleadoContratos => Set<EmpleadoContrato>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -75,7 +77,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         {
             e.HasKey(c => c.Id);
             e.Property(c => c.NombreCompleto).HasMaxLength(300).IsRequired();
-            e.HasIndex(c => c.TenantId).HasDatabaseName("IX_Clientes_TenantId");
+            
+            // Composite index for fast tenant-specific filtering by registration date
+            e.HasIndex(c => new { c.TenantId, c.FechaRegistro })
+             .HasDatabaseName("IX_Clientes_Tenant_Date");
+
             e.HasQueryFilter(c => c.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
         });
 
@@ -83,7 +89,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         builder.Entity<Vehiculo>(e =>
         {
             e.HasKey(v => v.Id);
-            e.HasIndex(v => v.TenantId).HasDatabaseName("IX_Vehiculos_TenantId");
+            
+            // Composite index to speed up the Vehicles grid
+            e.HasIndex(v => new { v.TenantId, v.FechaRegistro })
+             .HasDatabaseName("IX_Vehiculos_Tenant_Date");
+
             e.HasQueryFilter(v => v.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
             e.Ignore(v => v.Descripcion);
             e.HasOne(v => v.Cliente).WithMany(c => c.Vehiculos)
@@ -98,7 +108,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(o => o.Descuento).HasColumnType("decimal(12,2)");
             e.Property(o => o.IVA).HasColumnType("decimal(12,2)");
             e.Property(o => o.Total).HasColumnType("decimal(12,2)");
-            e.HasIndex(o => o.TenantId).HasDatabaseName("IX_Ordenes_TenantId");
+            
+            // Critical index for Ordenes grid (sorted by entry date)
+            e.HasIndex(o => new { o.TenantId, o.FechaEntrada, o.Estado })
+             .HasDatabaseName("IX_Ordenes_Tenant_Date_State");
+
             e.HasQueryFilter(o => o.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
             e.Ignore(o => o.EstadoTexto);
             e.Ignore(o => o.EstadoClase);
@@ -225,7 +239,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         builder.Entity<Appointment>(e =>
         {
             e.HasKey(a => a.Id);
-            e.HasIndex(a => new { a.TenantId, a.StartDateTime, a.EndDateTime }).HasDatabaseName("IX_Appointments_Tenant_DateRange_Mechanic").IncludeProperties(a => new { a.MechanicId, a.Status });
+            // Optimized index for Mechanic schedule queries
+            e.HasIndex(a => new { a.TenantId, a.MechanicId, a.StartDateTime, a.EndDateTime })
+             .HasDatabaseName("IX_Appointments_Tenant_Mechanic_Dates")
+             .IncludeProperties(a => new { a.Status });
             e.HasQueryFilter(a => a.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
             e.HasOne(a => a.Cliente).WithMany()
              .HasForeignKey(a => a.ClienteId).OnDelete(DeleteBehavior.Restrict);
@@ -253,6 +270,42 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Ignore(ev => ev.TipoClase);
             e.HasOne(ev => ev.Vehiculo).WithMany()
              .HasForeignKey(ev => ev.VehiculoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── Payroll: NominaRegistro ────────────────────────────────────────────────
+        builder.Entity<NominaRegistro>(e =>
+        {
+            e.HasKey(n => n.Id);
+            e.Property(n => n.Periodo).HasMaxLength(7).IsRequired();
+            e.Property(n => n.SalarioBase).HasColumnType("decimal(12,2)");
+            e.Property(n => n.Comisiones).HasColumnType("decimal(12,2)");
+            e.Property(n => n.Deducciones).HasColumnType("decimal(12,2)");
+            
+            // Critical index for Payroll list/filtering
+            e.HasIndex(n => new { n.TenantId, n.Periodo, n.Estado, n.UserId })
+             .HasDatabaseName("IX_NominaRegistros_Tenant_Period_Status_User");
+             
+            e.HasQueryFilter(n => n.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+        });
+
+        // ── Payroll: EmpleadoContrato ─────────────────────────────────────────────
+        builder.Entity<EmpleadoContrato>(e =>
+        {
+            e.HasKey(c => c.Id);
+            e.Property(c => c.SalarioBase).HasColumnType("decimal(12,2)");
+            e.Property(c => c.PorcentajeComision).HasColumnType("decimal(5,2)");
+            e.HasIndex(c => c.TenantId);
+            e.HasQueryFilter(c => c.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasOne<ApplicationUser>().WithOne(u => u.EmpleadoContrato)
+             .HasForeignKey<EmpleadoContrato>(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ApplicationUser>(e =>
+        {
+            e.HasOne(u => u.Tenant)
+             .WithMany()
+             .HasForeignKey(u => u.TenantId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Seed subscription plans

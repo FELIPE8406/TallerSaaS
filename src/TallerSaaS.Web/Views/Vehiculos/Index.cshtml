@@ -17,15 +17,11 @@
 <div class="card-custom p-3 mb-4">
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <div style="flex:1;min-width:200px;">
-      <select id="clienteFiltro" class="form-select" onchange="loadVehiculos(1)">
-        <option value="">Todos los clientes</option>
-        @foreach (var c in clientes)
-        {
-            <option value="@c.Id">@c.NombreCompleto</option>
-        }
-      </select>
+      <input type="text" id="clienteFiltroSearch" class="form-control" placeholder="Buscar cliente..." 
+             data-search-url="/Clientes/BuscarJson" data-target-id="clienteFiltroID" />
+      <input type="hidden" id="clienteFiltroID" value="" />
     </div>
-    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('clienteFiltro').value=''; loadVehiculos(1);">
+    <button type="button" class="btn btn-outline-secondary btn-limpiar-filtro-vehiculos">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
@@ -55,85 +51,5 @@
 @Html.AntiForgeryToken()
 
 @section Scripts {
-<script>
-    let currentPageSize = 10;
-
-    async function loadVehiculos(page = 1, pageSize = null) {
-        if (pageSize) currentPageSize = parseInt(pageSize);
-        
-        const tbody = document.getElementById('vehiculosTableBody');
-        const clienteId = document.getElementById('clienteFiltro').value;
-        const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando...</td></tr>';
-        
-        try {
-            let url = `/Vehiculos/GetPaged?page=${page}&size=${currentPageSize}`;
-            if (clienteId) url += `&clienteId=${clienteId}`;
-
-            const response = await fetch(url);
-            const result = await response.json();
-
-            document.getElementById('totalCountText').innerText = `${result.totalCount} vehículos registrados`;
-
-            if (!result.data || result.data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5" style="color:var(--text-muted);">
-                    <i class="bi bi-car-front" style="font-size:48px;opacity:.3;display:block;margin-bottom:12px;"></i>
-                    No hay vehículos registrados.
-                </td></tr>`;
-                document.getElementById('paginatorContainer').innerHTML = '';
-                return;
-            }
-
-            let rowsHtml = '';
-            for (const v of result.data) {
-                const colorTexto = v.color ? ` · ${v.color}` : '';
-                const placaHtml = v.placa 
-                    ? `<span style="font-family:monospace;font-weight:700;letter-spacing:.05em;background:var(--surface2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);">${v.placa}</span>`
-                    : `<span style="color:var(--text-muted);">—</span>`;
-                const vinTexto = v.vin || '—';
-
-                rowsHtml += `<tr>
-                    <td>
-                      <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:40px;height:40px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--primary);">
-                          <i class="bi bi-car-front"></i>
-                        </div>
-                        <div>
-                          <div style="font-weight:600;">${v.marca} ${v.modelo}</div>
-                          <div style="font-size:12px;color:var(--text-muted);">${v.anio}${colorTexto}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="d-none d-md-table-cell">${placaHtml}</td>
-                    <td class="d-none d-md-table-cell" style="color:var(--text-secondary);">${v.clienteNombre}</td>
-                    <td class="d-none d-lg-table-cell" style="font-family:monospace;font-size:12px;color:var(--text-muted);">${vinTexto}</td>
-                    <td>
-                      <div class="d-flex gap-1">
-                        <a href="/Vehiculos/Editar/${v.id}" class="btn btn-sm btn-outline-secondary" title="Editar"><i class="bi bi-pencil"></i></a>
-                        <a href="/Ordenes/Crear" class="btn btn-sm btn-outline-secondary" title="Nueva Orden"><i class="bi bi-file-earmark-plus"></i></a>
-                        <form action="/Vehiculos/Eliminar" method="post" onsubmit="event.preventDefault(); confirmarEliminar(this, '${v.marca} ${v.modelo}')">
-                          <input type="hidden" name="__RequestVerificationToken" value="${csrfToken}" />
-                          <input type="hidden" name="id" value="${v.id}" />
-                          <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>
-                        </form>
-                      </div>
-                    </td>
-                </tr>`;
-            }
-            tbody.innerHTML = rowsHtml;
-
-            // Render SURA UI pagination
-            const paginatorHtml = renderSuraPagination(result.totalCount, result.pageSize, result.pageNumber, 'loadVehiculos');
-            document.getElementById('paginatorContainer').innerHTML = paginatorHtml;
-
-        } catch (err) {
-            console.error("Error cargando vehículos:", err);
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Error al cargar listado de vehículos.</td></tr>';
-        }
-    }
-
-    // Call immediately instead of waiting for DOMContentLoaded to support dynamic navigations
-    loadVehiculos(1);
-</script>
+    <script src="/js/vehiculos.js"></script>
 }

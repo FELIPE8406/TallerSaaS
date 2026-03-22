@@ -1,4 +1,4 @@
-﻿@using TallerSaaS.Domain.Entities
+@using TallerSaaS.Domain.Entities
 @model IEnumerable<PlanSuscripcion>
 @{
     ViewData["Title"] = "Planes de Suscripción";
@@ -25,7 +25,7 @@
                         <div class="d-flex justify-content-between align-items-start mb-4">
                             <div>
                                 <span class="badge px-3 py-2 mb-2" 
-                                      style="border-radius: 8px; background: @(plan.ColorHex ?? "#0066CC")20; color: @(plan.ColorHex ?? "#0066CC");">
+                                      style="border-radius: 8px; background: @(plan.ColorHex ?? "#00d632")20; color: @(plan.ColorHex ?? "#00d632");">
                                     @(plan.Nombre.Contains("Básico") ? "Esencial" : plan.Nombre.Contains("Pro") ? "Crecimiento" : "Total")
                                 </span>
                                 <h4 class="fw-bold text-light">@plan.Nombre</h4>
@@ -49,13 +49,13 @@
                             {
                                 foreach (var b in plan.Beneficios.Split(','))
                                 {
-                                    <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#0066CC");"></i> @b.Trim()</li>
+                                    <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#00d632");"></i> @b.Trim()</li>
                                 }
                             }
                             else
                             {
-                                <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#0066CC");"></i> Hasta @plan.LimiteUsuarios mecánicos</li>
-                                <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#0066CC");"></i> Órdenes de Servicio ilimitadas</li>
+                                <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#00d632");"></i> Hasta @plan.LimiteUsuarios mecánicos</li>
+                                <li class="mb-3 text-light-emphasis"><i class="bi bi-check-circle-fill me-2" style="color: @(plan.ColorHex ?? "#00d632");"></i> Órdenes de Servicio ilimitadas</li>
                             }
                         </ul>
                         
@@ -103,7 +103,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted">Color UI (Hex)</label>
-                        <input type="color" name="ColorHex" id="planColorHex" class="form-control form-control-color bg-dark border-secondary w-100" style="border-radius:10px;height:45px;" value="#0066CC">
+                        <input type="color" name="ColorHex" id="planColorHex" class="form-control form-control-color bg-dark border-secondary w-100" style="border-radius:10px;height:45px;" value="#00d632">
                     </div>
                 </div>
                 <div class="modal-footer border-secondary p-4">
@@ -133,7 +133,7 @@
             document.getElementById('planPrecio').value = "";
             document.getElementById('planLimiteUsuarios').value = "5";
             document.getElementById('planBeneficios').value = "";
-            document.getElementById('planColorHex').value = "#0066CC";
+            document.getElementById('planColorHex').value = "#00d632";
             planModal.show();
         }
 
@@ -151,7 +151,7 @@
                 document.getElementById('planPrecio').value = plan.precio;
                 document.getElementById('planLimiteUsuarios').value = plan.limiteUsuarios;
                 document.getElementById('planBeneficios').value = plan.beneficios || "";
-                document.getElementById('planColorHex').value = plan.colorHex || "#0066CC";
+                document.getElementById('planColorHex').value = plan.colorHex || "#00d632";
                 
                 planModal.show();
             } catch (error) {
@@ -185,7 +185,7 @@
 <style>
     .sa-plan-card:hover {
         transform: translateY(-8px);
-        border-color: #0066CC !important;
+        border-color: #00d632 !important;
         box-shadow: 0 12px 40px rgba(0, 102, 204, 0.2) !important;
     }
     .dropdown-item:hover { background-color: rgba(255,255,255,0.05); }
