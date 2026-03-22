@@ -604,6 +604,20 @@ body {
   border-color: var(--text-muted) !important;
 }
 
+.btn-outline-primary {
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  background-color: transparent !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:active,
+.btn-outline-primary.active {
+  color: #fff !important;
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
 .btn-sm {
   padding: 5px 11px !important;
   font-size: 13px !important;

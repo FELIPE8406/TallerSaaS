@@ -284,5 +284,6 @@ C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\D
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\dv5z5ojko2-hcncrmn1sk.gz
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\d1cyksfb2m-vkkkpfo5px.gz
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\g6cf9vq5u3-fozvpcc0xm.gz
-C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\sgyh3b1asq-2yq91v19fc.gz
 C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\97vj25umpb-evyogv015o.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\compressed\sgyh3b1asq-kzoe6oourf.gz
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
