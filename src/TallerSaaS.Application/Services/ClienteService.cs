@@ -2,14 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services;
 
 public class ClienteService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentTenantService _tenantService;
 
-    public ClienteService(IApplicationDbContext db) => _db = db;
+    public ClienteService(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
     public async Task<List<ClienteDto>> GetAllAsync(string? buscar = null)
     {
@@ -28,7 +34,7 @@ public class ClienteService
 
         return await query.Select(c => new ClienteDto
         {
-            Id = c.Id, NombreCompleto = c.NombreCompleto, Email = c.Email,
+            Id = c.Id, TenantId = c.TenantId, NombreCompleto = c.NombreCompleto, Email = c.Email,
             Telefono = c.Telefono, Direccion = c.Direccion, Cedula = c.Cedula,
             FechaRegistro = c.FechaRegistro, Activo = c.Activo,
             TotalVehiculos = c.Vehiculos.Count
@@ -57,7 +63,7 @@ public class ClienteService
     public async Task<ClienteDto?> GetByIdAsync(Guid id) =>
         await _db.Clientes.AsNoTracking().Where(c => c.Id == id).Select(c => new ClienteDto
         {
-            Id = c.Id, NombreCompleto = c.NombreCompleto, Email = c.Email,
+            Id = c.Id, TenantId = c.TenantId, NombreCompleto = c.NombreCompleto, Email = c.Email,
             Telefono = c.Telefono, Direccion = c.Direccion, Cedula = c.Cedula,
             FechaRegistro = c.FechaRegistro, Activo = c.Activo,
             TotalVehiculos = c.Vehiculos.Count
@@ -78,19 +84,36 @@ public class ClienteService
 
     public async Task UpdateAsync(ClienteDto dto)
     {
-        var cliente = await _db.Clientes.FindAsync(dto.Id) ?? throw new Exception("Cliente no encontrado");
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
+        var cliente = await _db.Clientes
+            .FirstOrDefaultAsync(c => c.Id == dto.Id && c.TenantId == _tenantService.TenantId.Value)
+            ?? throw new Exception("Cliente no encontrado");
         cliente.NombreCompleto = dto.NombreCompleto;
         cliente.Email = dto.Email;
         cliente.Telefono = dto.Telefono;
         cliente.Direccion = dto.Direccion;
         cliente.Cedula = dto.Cedula;
+        cliente.Activo = dto.Activo;
         await _db.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(Guid id)
     {
-        var cliente = await _db.Clientes.FindAsync(id) ?? throw new Exception("Cliente no encontrado");
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
+        var cliente = await _db.Clientes
+            .FirstOrDefaultAsync(c => c.Id == id && c.TenantId == _tenantService.TenantId.Value)
+            ?? throw new Exception("Cliente no encontrado");
         cliente.Activo = false;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task ToggleStatusAsync(Guid id)
+    {
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
+        var cliente = await _db.Clientes
+            .FirstOrDefaultAsync(c => c.Id == id && c.TenantId == _tenantService.TenantId.Value)
+            ?? throw new Exception("Cliente no encontrado");
+        cliente.Activo = !cliente.Activo;
         await _db.SaveChangesAsync();
     }
 }

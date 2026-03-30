@@ -24,6 +24,7 @@ public class InventarioController : Controller
 
     public async Task<IActionResult> Index(string? buscar, string? categoria)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var categorias = await _inventarioService.GetCategoriasAsync();
         var bajoStock = await _inventarioService.GetBajoStockAsync();
         ViewBag.Buscar = buscar;
@@ -36,6 +37,7 @@ public class InventarioController : Controller
     [HttpGet]
     public async Task<IActionResult> GetPaged(int page = 1, int size = 10, string? buscar = null, string? categoria = null)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var paged = await _inventarioService.GetAllPagedAsync(page, size, buscar, categoria);
         return Json(new {
             items = paged.Data,
@@ -47,6 +49,7 @@ public class InventarioController : Controller
 
     public async Task<IActionResult> Crear()
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         ViewBag.Bodegas = await _bodegaService.GetAllAsync();
         return View(new InventarioDto());
     }
@@ -63,8 +66,10 @@ public class InventarioController : Controller
 
     public async Task<IActionResult> Editar(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var producto = await _inventarioService.GetByIdAsync(id);
         if (producto == null) return NotFound();
+        if (producto.TenantId != _tenantService.TenantId.Value) return Forbid();
         ViewBag.Bodegas = await _bodegaService.GetAllAsync();
         return View(producto);
     }
@@ -73,6 +78,10 @@ public class InventarioController : Controller
     public async Task<IActionResult> Editar(InventarioDto dto)
     {
         if (!ModelState.IsValid) return View(dto);
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var existing = await _inventarioService.GetByIdAsync(dto.Id);
+        if (existing == null) return NotFound();
+        if (existing.TenantId != _tenantService.TenantId.Value) return Forbid();
         await _inventarioService.UpdateAsync(dto);
         TempData["Exito"] = "Producto actualizado.";
         return RedirectToAction(nameof(Index));
@@ -82,15 +91,18 @@ public class InventarioController : Controller
     public async Task<IActionResult> AjustarStock(Guid id, int cantidad, string tipo, string? observaciones = null)
     {
         if (!_tenantService.TenantId.HasValue) return Forbid();
+        var producto = await _inventarioService.GetByIdAsync(id);
+        if (producto == null) return NotFound();
+        if (producto.TenantId != _tenantService.TenantId.Value) return Forbid();
         await _inventarioService.AjustarStockAsync(id, cantidad, tipo, _tenantService.TenantId.Value, observaciones);
         TempData["Exito"] = $"Stock {(tipo == "entrada" ? "aumentado" : "reducido")} correctamente.";
         return RedirectToAction(nameof(Index));
     }
 
-    // ── AJAX: Buscador de productos para Traslado autocomplete ───────────────
     [HttpGet]
     public async Task<IActionResult> BuscarProductos(string q)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
             return Json(Array.Empty<object>());
 

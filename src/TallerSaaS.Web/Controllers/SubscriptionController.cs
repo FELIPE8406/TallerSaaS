@@ -41,9 +41,11 @@ public class SubscriptionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> SelectPlan(int planId)
     {
-        var plan = await _db.PlanesSuscripcion.FindAsync(planId);
+        var plan = await _db.PlanesSuscripcion
+            .FirstOrDefaultAsync(p => p.Id == planId && p.Activo);
         if (plan == null) return NotFound();
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -51,8 +53,12 @@ public class SubscriptionController : Controller
 
         if (user == null) return Unauthorized();
 
-        // Si no tiene taller (Tenant), lo creamos por defecto o pedimos datos.
-        // Por ahora, creamos uno básico para permitir la transición.
+        if (user.Tenant?.PlanSuscripcionId != null && !User.IsInRole("SuperAdmin"))
+        {
+            TempData["Error"] = "Ya tienes un plan activo. Contacta a soporte para cambiar de plan.";
+            return RedirectToAction("Index", "Dashboard");
+        }
+
         if (user.Tenant == null)
         {
             var newTenant = new Tenant

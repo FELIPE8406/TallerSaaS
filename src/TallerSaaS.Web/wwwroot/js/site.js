@@ -298,6 +298,62 @@ const AntigravityNav = {
  * Global Utilities
  */
 
+async function descargarArchivo(url) {
+    const toast = typeof Swal !== 'undefined' ? Swal.fire({
+        title: 'Preparando descarga...',
+        text: 'Por favor espera un momento.',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    }) : null;
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType || contentType.includes('text/html')) {
+            throw new Error('El servidor devolvió un error en lugar de un archivo.');
+        }
+
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        
+        let fileName = 'archivo_geardash';
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?(.+?)"?$/);
+            if (match) fileName = match[1];
+        }
+
+        const objectUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+
+        link.remove();
+        window.URL.revokeObjectURL(objectUrl);
+        
+        if (toast) Swal.fire({ icon: 'success', title: 'Descarga iniciada', timer: 1500, showConfirmButton: false });
+
+    } catch (err) {
+        console.error('Error en descarga:', err);
+        if (toast) {
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Error en la descarga', 
+                text: err.message || 'No se pudo completar la descarga del archivo.' 
+            });
+        }
+    }
+}
+
 function setupSearchSelector(element) {
     if (element.dataset.initialized) return;
     element.dataset.initialized = "true";

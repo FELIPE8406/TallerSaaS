@@ -366,18 +366,18 @@ public class AppointmentService : IAppointmentService
     private static AppointmentDto MapToDto(Appointment a) => new()
     {
         Id = a.Id,
+        TenantId = a.TenantId,
         ClienteId = a.ClienteId,
         ClienteNombre = a.Cliente?.NombreCompleto ?? "N/A",
         VehiculoId = a.VehiculoId,
         VehiculoDescripcion = a.Vehiculo != null ? $"{a.Vehiculo.Anio} {a.Vehiculo.Marca} {a.Vehiculo.Modelo} ({a.Vehiculo.Placa ?? "ND"})" : "N/A",
         MechanicId = a.MechanicId,
-        // UI expects Local Time, convert DB UTC to Colombia Time
         StartDateTime = TimeZoneHelper.ToColombiaFromUtc(a.StartDateTime),
         EndDateTime = TimeZoneHelper.ToColombiaFromUtc(a.EndDateTime),
         EstimatedDuration = a.EstimatedDuration,
         ServiceType = a.ServiceType,
         Status = (int)a.Status,
-        StatusTexto = a.Status switch 
+        StatusTexto = a.Status switch
         {
             AppointmentStatus.Confirmed => "Confirmada",
             AppointmentStatus.CheckedIn => "En Taller",

@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Interfaces;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services.Exporters;
 
@@ -12,12 +13,17 @@ namespace TallerSaaS.Application.Services.Exporters;
 public class CsvExportStrategy : IExportStrategy
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentTenantService _tenantService;
     public string ContentType => "text/csv";
     public string FileExtension => "csv";
 
-    public CsvExportStrategy(IApplicationDbContext db) => _db = db;
+    public CsvExportStrategy(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
-    public async Task<byte[]> ExportarOrdenesAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarOrdenesAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var ordenes = await _db.Ordenes
             .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
@@ -26,6 +32,7 @@ public class CsvExportStrategy : IExportStrategy
             .ToListAsync();
 
         var sb = new StringBuilder();
+        sb.AppendLine($"{tenantNombre} — NIT: {tenantNIT} — REPORTE DE ÓRDENES");
         sb.AppendLine("No. Orden;Cliente;Vehículo;Placa;Estado;Fecha Entrada;Fecha Salida;Subtotal;Descuento;IVA;Total;Pagada");
 
         foreach (var o in ordenes)
@@ -43,7 +50,7 @@ public class CsvExportStrategy : IExportStrategy
         return Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
     }
 
-    public async Task<byte[]> ExportarFacturasAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarFacturasAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var facturas = await _db.Facturas
             .Include(f => f.Ordenes)
@@ -52,6 +59,7 @@ public class CsvExportStrategy : IExportStrategy
             .ToListAsync();
 
         var sb = new StringBuilder();
+        sb.AppendLine($"{tenantNombre} — NIT: {tenantNIT} — REPORTE DE FACTURAS");
         sb.AppendLine("No. Factura;Fecha Emisión;Órdenes Incluidas;Subtotal;Descuento;IVA;Total");
 
         foreach (var f in facturas)
@@ -64,7 +72,7 @@ public class CsvExportStrategy : IExportStrategy
         return Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
     }
 
-    public async Task<byte[]> ExportarClientesVehiculosAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarClientesVehiculosAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var clientes = await _db.Clientes
             .Include(c => c.Vehiculos)
@@ -73,6 +81,7 @@ public class CsvExportStrategy : IExportStrategy
             .ToListAsync();
 
         var sb = new StringBuilder();
+        sb.AppendLine($"{tenantNombre} — NIT: {tenantNIT} — RELACIÓN CLIENTE - VEHÍCULO");
         sb.AppendLine("Cliente;Cédula;Email;Teléfono;Vehículo;Placa;VIN;Año;Kilometraje");
 
         foreach (var c in clientes)

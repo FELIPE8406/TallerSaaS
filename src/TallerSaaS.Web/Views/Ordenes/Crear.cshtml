@@ -1,9 +1,32 @@
 @using TallerSaaS.Application.DTOs
 @model TallerSaaS.Application.DTOs.OrdenDto
-@{
-  ViewData["Title"] = "Nueva Orden";
-  var clientes = ViewBag.Clientes as List<ClienteDto> ?? new();
-  var vehiculos = ViewBag.Vehiculos as List<VehiculoDto> ?? new();
+@section Styles {
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <style>
+    /* Select2 Dark/Light Mode adaptivity */
+    .select2-container--default .select2-selection--single {
+        height: 42px;
+        padding-top: 6px;
+        border: 1px solid var(--border-subtle);
+        background-color: var(--surface2);
+        color: var(--text);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: var(--text);
+    }
+    .select2-dropdown {
+        background-color: var(--surface2);
+        border: 1px solid var(--border-subtle);
+        color: var(--text);
+        z-index: 9999 !important;
+    }
+    .select2-container {
+        z-index: 9998 !important;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--primary);
+    }
+  </style>
 }
 
 <div class="page-header">
@@ -31,19 +54,24 @@
         </div>
         <div style="padding:24px;">
 
-          <div class="mb-4">
+          <div class="mb-4 position-relative">
             <label class="form-label">Cliente *</label>
-            <input type="text" id="clienteSearch" class="form-control" placeholder="Buscar cliente..." 
-                   data-search-url="/Clientes/BuscarJson" data-target-id="clienteIdHidden" required />
-            <input type="hidden" id="clienteIdHidden" />
+            <div class="input-group">
+                <span class="input-group-text bg-surface2 border-subtle"><i class="bi bi-person"></i></span>
+                <input type="text" id="clienteInput" class="form-control" autocomplete="off"
+                       placeholder="Escriba nombre o identificación del cliente...">
+            </div>
+            <input type="hidden" id="clienteId" />
+            <div id="clientesDropdown" class="ag-search-dropdown shadow border rounded mt-1 overflow-auto" 
+                 style="position: absolute; top: 100%; left: 0; right: 0; background: var(--surface2); z-index: 1000; display: none; max-height: 250px;">
+            </div>
           </div>
 
           <div class="mb-4">
             <label class="form-label">Vehículo *</label>
-            <input type="text" id="vehiculoSearch" class="form-control" placeholder="Primero busque un cliente..." 
-                   data-search-url="/Vehiculos/BuscarJson" data-target-id="VehiculoId" 
-                   data-depend-id="clienteIdHidden" data-depend-param="clienteId" required />
-            <input type="hidden" asp-for="VehiculoId" />
+            <select asp-for="VehiculoId" id="vehiculoSelect" class="form-select" style="width:100%" disabled required>
+                <option value="">Seleccione primero un cliente...</option>
+            </select>
             <span asp-validation-for="VehiculoId" class="text-danger" style="font-size:12px;"></span>
           </div>
 
@@ -111,11 +139,147 @@
 
 @section Scripts {
   <partial name="_ValidationScriptsPartial" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
-    // Reset vehicle on client change
-    document.getElementById('clienteIdHidden').addEventListener('change', function() {
-        document.getElementById('vehiculoSearch').value = '';
-        document.getElementById('VehiculoId').value = '';
+    /**
+     * TallerSaaS Select2 Robust Initializer
+     * This function is designed to work both on direct load and SPA navigation.
+        /**
+     * TallerSaaS Optimized Search (Preload + Cache + Debounce)
+     */
+    let clientesCache = [];
+    let clientesCargados = false;
+
+    async function inicializarBusquedaClientes() {
+        console.log("Antigravity: Initializing Optimized Search (Cache + Debounce)...");
+        
+        const $vehiculoSelect = $('#vehiculoSelect');
+        const inputCliente = document.getElementById('clienteInput');
+        const dropdown = document.getElementById('clientesDropdown');
+
+        if ($vehiculoSelect.hasClass('select2-hidden-accessible')) {
+            $vehiculoSelect.select2('destroy');
+        }
+        $vehiculoSelect.select2({ theme: "default", placeholder: "Seleccione primero un cliente" });
+
+        // 1. PRELOAD
+        if (!clientesCargados) {
+            try {
+                const response = await fetch('@Url.Action("GetAllJson", "Clientes")');
+                if (response.ok) {
+                    clientesCache = await response.json();
+                    clientesCargados = true;
+                    console.log(`Antigravity: Cache loaded with ${clientesCache.length} clients.`);
+                }
+            } catch (err) {
+                console.error("Antigravity: Error preloading client cache.", err);
+            }
+        }
+
+        // 2. DEBOUNCED INPUT
+        inputCliente.addEventListener('input', debounce(function () {
+            const query = this.value.trim();
+            if (query.length < 2) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            const resultados = filtrarClientes(query);
+            renderizarResultados(resultados);
+        }, 300));
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (e.target !== inputCliente && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+
+    function debounce(fn, delay) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    function filtrarClientes(query) {
+        const q = query.toLowerCase();
+        return clientesCache.filter(c =>
+            c.text.toLowerCase().includes(q)
+        );
+    }
+
+    function renderizarResultados(lista) {
+        const container = document.getElementById('clientesDropdown');
+        container.innerHTML = '';
+
+        if (lista.length === 0) {
+            container.innerHTML = '<div class="p-3 text-muted" style="font-size:13px;">No se encontraron resultados</div>';
+        } else {
+            lista.slice(0, 15).forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'p-2 border-bottom ag-search-item';
+                item.style.cursor = 'pointer';
+                item.style.fontSize = '14px';
+                item.textContent = c.text;
+
+                item.onclick = () => seleccionarCliente(c);
+                container.appendChild(item);
+            });
+        }
+        container.style.display = 'block';
+    }
+
+    function seleccionarCliente(cliente) {
+        document.getElementById('clienteInput').value = cliente.text;
+        document.getElementById('clienteId').value = cliente.id;
+        document.getElementById('clientesDropdown').style.display = 'none';
+        
+        // Trigger original vehicle loading logic
+        cargarVehiculos(cliente.id);
+    }
+
+    function cargarVehiculos(clienteId) {
+        const $select = $('#vehiculoSelect');
+        $select.empty().append('<option value="">Cargando vehículos...</option>').prop('disabled', true).trigger('change');
+
+        $.getJSON(`/Vehiculos/BuscarJson?clienteId=${clienteId}`, function(data) {
+            $select.empty().append('<option value="">Elija el vehículo del cliente...</option>');
+            if (data && data.length > 0) {
+                data.forEach(v => {
+                    $select.append(new Option(v.text, v.id, false, false));
+                });
+                $select.prop('disabled', false);
+            } else {
+                $select.append('<option value="">El cliente no tiene vehículos de alta</option>');
+                showErrorToast("Este cliente no tiene ningún vehículo registrado.");
+            }
+            $select.trigger('change');
+        });
+    }
+
+    // Execution Context
+    (function init() {
+        if (typeof jQuery !== 'undefined' && typeof $.fn.select2 !== 'undefined') {
+            inicializarBusquedaClientes();
+        } else {
+            let attempts = 0;
+            const check = setInterval(() => {
+                attempts++;
+                if (typeof jQuery !== 'undefined' && typeof $.fn.select2 !== 'undefined') {
+                    inicializarBusquedaClientes();
+                    clearInterval(check);
+                }
+                if (attempts > 50) clearInterval(check);
+            }, 100);
+        }
+    })();
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof inicializarBusquedaClientes === 'function') {
+            inicializarBusquedaClientes();
+        }
     });
   </script>
 }

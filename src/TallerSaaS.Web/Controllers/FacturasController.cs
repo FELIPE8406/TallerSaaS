@@ -4,6 +4,8 @@ using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Services;
 using TallerSaaS.Domain.Interfaces;
 using TallerSaaS.Shared.Helpers;
+using Microsoft.EntityFrameworkCore;
+using TallerSaaS.Application.Interfaces;
 
 namespace TallerSaaS.Web.Controllers;
 
@@ -14,30 +16,33 @@ public class FacturasController : Controller
     private readonly OrdenService _ordenService;
     private readonly ReporteService _reporteService;
     private readonly ICurrentTenantService _tenantService;
+    private readonly IApplicationDbContext _db;
 
     public FacturasController(
         FacturaService facturaService,
         OrdenService ordenService,
         ReporteService reporteService,
-        ICurrentTenantService tenantService)
+        ICurrentTenantService tenantService,
+        IApplicationDbContext db)
     {
         _facturaService  = facturaService;
         _ordenService    = ordenService;
         _reporteService  = reporteService;
         _tenantService   = tenantService;
+        _db              = db;
     }
 
-    // ── Lista de Facturas ─────────────────────────────────────────────────────
     public async Task<IActionResult> Index()
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var facturas = await _facturaService.GetAllAsync();
         return View(facturas);
     }
 
-    // ── AJAX: Listado paginado de Facturas ────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> GetPaged(int page = 1, int size = 10)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var paged = await _facturaService.GetPagedAsync(page, size);
         return Json(new
         {
@@ -48,10 +53,9 @@ public class FacturasController : Controller
         });
     }
 
-    // ── Nueva Factura — selección de órdenes ──────────────────────────────────
     public async Task<IActionResult> Nueva()
     {
-        // Only show orders in "Terminado" state that are not blocked yet
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var ordenesElegibles = await _ordenService.GetAllAsync(Domain.Enums.EstadoOrden.Terminado);
         var noFacturadas = ordenesElegibles.Where(o => !o.Bloqueada).ToList();
         return View(noFacturadas);
@@ -67,7 +71,9 @@ public class FacturasController : Controller
             return RedirectToAction(nameof(Nueva));
         }
 
-        // Convertir el valor del formulario al enum de dominio
+        var ordenes = await Task.WhenAll(ordenIds.Select(oid => _ordenService.GetByIdAsync(oid)));
+        if (ordenes.Any(o => o == null || o.TenantId != _tenantService.TenantId.Value)) return Forbid();
+
         var tipo = tipoFacturacion == "Electronica"
             ? Domain.Enums.TipoFacturacion.Electronica
             : Domain.Enums.TipoFacturacion.NoElectronica;
@@ -79,17 +85,12 @@ public class FacturasController : Controller
 
             if (tipo == Domain.Enums.TipoFacturacion.Electronica)
             {
-                // Fase 1 (transicional): la factura electrónica queda registrada con
-                // EstadoEnvio = PendienteEnvio. El ciclo de entrega YA se cierra aquí
-                // (orden.Pagada = true, Estado = EntregadoYFacturado).
-                // El botón "Enviar a DIAN" en el Detalle es el placeholder para Fase 2.
                 TempData["Exito"] = $"Factura {factura.NumeroFactura} registrada como " +
                                     "<strong>Factura Electrónica — Pendiente de Envío a la DIAN</strong>. " +
                                     "La orden fue marcada como entregada. Use el botón \"Enviar a DIAN\" cuando la integración esté activa.";
                 return RedirectToAction(nameof(Detalle), new { id = factura.Id });
             }
 
-            // Factura interna: flujo normal.
             TempData["Exito"] = $"Factura {factura.NumeroFactura} generada exitosamente.";
             return RedirectToAction(nameof(Detalle), new { id = factura.Id });
         }
@@ -100,46 +101,53 @@ public class FacturasController : Controller
         }
     }
 
-    // ── Detalle de Factura ────────────────────────────────────────────────────
     public async Task<IActionResult> Detalle(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var factura = await _facturaService.GetByIdAsync(id);
         if (factura == null) return NotFound();
+        if (factura.TenantId != _tenantService.TenantId.Value) return Forbid();
         return View(factura);
     }
 
-    // ── Descarga PDF Apple-Style ──────────────────────────────────────────────
     public async Task<IActionResult> DescargarPdf(Guid id)
     {
-        var tenantNombre = User.FindFirst(TenantClaimTypes.TenantNombre)?.Value ?? "Taller";
-        var pdf = await _reporteService.GenerarFacturaPdfPorFacturaAsync(id, tenantNombre);
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var factura = await _facturaService.GetByIdAsync(id);
+        if (factura == null) return NotFound();
+        if (factura.TenantId != _tenantService.TenantId.Value) return Forbid();
+        
+        var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == _tenantService.TenantId.Value);
+        var tNombre = tenant?.Nombre ?? "Taller";
+        var tNIT    = tenant?.NIT ?? "N/A";
+
+        var pdf = await _reporteService.GenerarFacturaPdfPorFacturaAsync(id, tNombre, tNIT);
         return File(pdf, "application/pdf", $"Factura-{DateTime.Now:yyyyMMddHHmm}.pdf");
     }
 
-    // ── Descarga Excel Pro ────────────────────────────────────────────────────
     [Authorize(Roles = "Admin,SuperAdmin")]
     public async Task<IActionResult> DescargarExcel()
     {
-        var excel = await _reporteService.ExportarFacturasExcelAsync();
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        
+        var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == _tenantService.TenantId.Value);
+        var tNombre = tenant?.Nombre ?? "Taller";
+        var tNIT    = tenant?.NIT ?? "N/A";
+
+        var excel = await _reporteService.ExportarFacturasExcelAsync(tNombre, tNIT);
         return File(excel,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"Facturas-{DateTime.Now:yyyyMMdd}.xlsx");
     }
 
-    // ── Placeholder: Enviar a DIAN (Fase 1 → Fase 2) ────────────────────────
-    /// <summary>
-    /// Fase 1 (transicional): no realiza ninguna llamada a la API DIAN.
-    /// Registra la intención en TempData y redirige al Dashboard sin errores.
-    /// En Fase 2, este método invocará el servicio de integración DIAN y
-    /// actualizará factura.EstadoEnvio = Enviada.
-    /// </summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> EnviarADian(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var factura = await _facturaService.GetByIdAsync(id);
         if (factura == null) return NotFound();
+        if (factura.TenantId != _tenantService.TenantId.Value) return Forbid();
 
-        // TODO Fase 2: invocar IDianService.EnviarAsync(id) y persistir EstadoEnvio = Enviada
         TempData["Info"] = $"Factura <strong>{factura.NumeroFactura}</strong>: la integración con la DIAN " +
                            "está <strong>en construcción</strong>. Cuando esté activa, este botón " +
                            "enviará el documento electrónico a la DIAN automáticamente.";

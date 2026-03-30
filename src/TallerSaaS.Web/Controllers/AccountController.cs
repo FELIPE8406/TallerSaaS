@@ -110,24 +110,41 @@ public class AccountController : Controller
                 .Include(u => u.Tenant)
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(u => u.Email == info.Principal.FindFirstValue(ClaimTypes.Email));
-            
-            if (user != null && !user.EsSuperAdmin && (user.TenantId == null || user.Tenant?.PlanSuscripcionId == null))
+
+            if (user == null || !user.Activo)
+            {
+                TempData["Error"] = "Cuenta inactiva o no registrada. Contacte al administrador.";
+                return RedirectToAction("Login", new { returnUrl });
+            }
+
+            if (!user.EsSuperAdmin && (user.TenantId == null || user.Tenant?.PlanSuscripcionId == null))
             {
                 return RedirectToAction("Index", "Subscription");
             }
+
             return LocalRedirect(returnUrl);
         }
 
-        // Si el usuario no tiene cuenta, podrías crear una automáticamente o pedir registro.
-        // Aquí intentamos buscar por email para vincular cuentas existentes.
         var email = info.Principal.FindFirstValue(System.Security.Claims.ClaimTypes.Email);
         if (email != null)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.Users
+                .Include(u => u.Tenant)
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.Email == email);
             if (user != null)
             {
+                if (!user.Activo)
+                {
+                    TempData["Error"] = "Cuenta inactiva. Contacte al administrador.";
+                    return RedirectToAction("Login");
+                }
                 await _userManager.AddLoginAsync(user, info);
                 await _signInManager.SignInAsync(user, isPersistent: false);
+
+                if (!user.EsSuperAdmin && (user.TenantId == null || user.Tenant?.PlanSuscripcionId == null))
+                    return RedirectToAction("Index", "Subscription");
+
                 return LocalRedirect(returnUrl);
             }
         }

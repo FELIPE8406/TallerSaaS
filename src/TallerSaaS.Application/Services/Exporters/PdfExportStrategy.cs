@@ -4,6 +4,7 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Interfaces;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services.Exporters;
 
@@ -14,13 +15,18 @@ namespace TallerSaaS.Application.Services.Exporters;
 public class PdfExportStrategy : IExportStrategy
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentTenantService _tenantService;
     public string ContentType => "application/pdf";
     public string FileExtension => "pdf";
 
-    public PdfExportStrategy(IApplicationDbContext db) => _db = db;
+    public PdfExportStrategy(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
     // ── ÓRDENES ───────────────────────────────────────────────────────────────
-    public async Task<byte[]> ExportarOrdenesAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarOrdenesAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var ordenes = await _db.Ordenes
             .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
@@ -35,7 +41,7 @@ public class PdfExportStrategy : IExportStrategy
             container.Page(page =>
             {
                 page.Margin(30);
-                page.Header().Element(HeaderCell("REPORTE DE ÓRDENES DE TRABAJO", filtro));
+                page.Header().Element(HeaderCell("REPORTE DE ÓRDENES DE TRABAJO", filtro, tenantNombre, tenantNIT));
                 page.Content().Table(t =>
                 {
                     t.ColumnsDefinition(c =>
@@ -79,7 +85,7 @@ public class PdfExportStrategy : IExportStrategy
     }
 
     // ── FACTURAS ──────────────────────────────────────────────────────────────
-    public async Task<byte[]> ExportarFacturasAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarFacturasAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var facturas = await _db.Facturas
             .Include(f => f.Ordenes)
@@ -94,7 +100,7 @@ public class PdfExportStrategy : IExportStrategy
             container.Page(page =>
             {
                 page.Margin(30);
-                page.Header().Element(HeaderCell("REPORTE DE FACTURAS", filtro));
+                page.Header().Element(HeaderCell("REPORTE DE FACTURAS", filtro, tenantNombre, tenantNIT));
                 page.Content().Table(t =>
                 {
                     t.ColumnsDefinition(c =>
@@ -138,7 +144,7 @@ public class PdfExportStrategy : IExportStrategy
     }
 
     // ── CLIENTES Y VEHÍCULOS ──────────────────────────────────────────────────
-    public async Task<byte[]> ExportarClientesVehiculosAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarClientesVehiculosAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var clientes = await _db.Clientes
             .Include(c => c.Vehiculos)
@@ -151,7 +157,7 @@ public class PdfExportStrategy : IExportStrategy
             container.Page(page =>
             {
                 page.Margin(30);
-                page.Header().Element(HeaderCell("RELACIÓN CLIENTES Y VEHÍCULOS", filtro));
+                page.Header().Element(HeaderCell("RELACIÓN CLIENTES Y VEHÍCULOS", filtro, tenantNombre, tenantNIT));
                 page.Content().Table(t =>
                 {
                     t.ColumnsDefinition(c =>
@@ -206,10 +212,12 @@ public class PdfExportStrategy : IExportStrategy
     }
 
     // ── Helper: bloque de encabezado reutilizable ─────────────────────────────
-    private static Action<IContainer> HeaderCell(string titulo, ReporteFilter filtro) =>
+    private Action<IContainer> HeaderCell(string titulo, ReporteFilter filtro, string tenantNombre, string tenantNIT) =>
         c => c.Column(col =>
         {
-            col.Item().Text(titulo).FontSize(16).Bold().FontColor("#1C1C1E");
+            col.Item().Text(tenantNombre).FontSize(14).Bold().FontColor("#0A84FF");
+            col.Item().Text($"NIT: {tenantNIT}").FontSize(10).FontColor("#8E8E93");
+            col.Item().PaddingTop(4).Text(titulo).FontSize(16).Bold().FontColor("#1C1C1E");
             col.Item().Text($"Período: {filtro.Desde:dd/MM/yyyy} — {filtro.Hasta:dd/MM/yyyy}")
                 .FontSize(10).FontColor("#636366");
             col.Item().PaddingBottom(12).BorderBottom(1).BorderColor("#E5E5EA");

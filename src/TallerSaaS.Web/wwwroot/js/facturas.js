@@ -67,7 +67,7 @@
                         <td class="text-end fw-bold">$${total}</td>
                         <td class="text-center">
                             <a href="/Facturas/Detalle/${f.id}" class="btn btn-sm btn-outline-primary me-1">Ver</a>
-                            <a href="/Facturas/DescargarPdf/${f.id}" class="btn btn-sm btn-outline-danger" target="_blank">📄 PDF</a>
+                            <button type="button" onclick="descargarArchivo('/Facturas/DescargarPdf/${f.id}')" class="btn btn-sm btn-outline-danger">📄 PDF</button>
                         </td>
                     </tr>`;
                 }).join('');

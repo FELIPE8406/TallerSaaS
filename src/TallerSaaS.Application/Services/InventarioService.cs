@@ -4,14 +4,20 @@ using TallerSaaS.Application.Extensions;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
 using TallerSaaS.Domain.Enums;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services;
 
 public class InventarioService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentTenantService _tenantService;
 
-    public InventarioService(IApplicationDbContext db) => _db = db;
+    public InventarioService(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
     public async Task<PagedResult<InventarioDto>> GetAllPagedAsync(int pageNumber, int pageSize, string? buscar = null, string? categoria = null)
     {
@@ -42,7 +48,7 @@ public class InventarioService
             PageSize = paged.PageSize,
             Data = paged.Data.Select(p => new InventarioDto
             {
-                Id = p.Id, Nombre = p.Nombre, SKU = p.SKU, Descripcion = p.Descripcion,
+                Id = p.Id, TenantId = _tenantService.TenantId ?? Guid.Empty, Nombre = p.Nombre, SKU = p.SKU, Descripcion = p.Descripcion,
                 Categoria = p.Categoria, Stock = p.Stock, StockMinimo = p.StockMinimo,
                 PrecioCompra = p.PrecioCompra, PrecioVenta = p.PrecioVenta, Proveedor = p.Proveedor,
                 BodegaId = p.BodegaId,
@@ -65,14 +71,18 @@ public class InventarioService
 
     public async Task<InventarioDto?> GetByIdAsync(Guid id)
     {
-        var p = await _db.Inventario.FindAsync(id);
+        var p = await _db.Inventario
+            .AsNoTracking()
+            .Include(x => x.Bodega)
+            .FirstOrDefaultAsync(x => x.Id == id);
         if (p == null) return null;
         return new InventarioDto
         {
-            Id = p.Id, Nombre = p.Nombre, SKU = p.SKU, Descripcion = p.Descripcion,
+            Id = p.Id, TenantId = p.TenantId, Nombre = p.Nombre, SKU = p.SKU, Descripcion = p.Descripcion,
             Categoria = p.Categoria, Stock = p.Stock, StockMinimo = p.StockMinimo,
             PrecioCompra = p.PrecioCompra, PrecioVenta = p.PrecioVenta, Proveedor = p.Proveedor,
             BodegaId = p.BodegaId,
+            BodegaNombre = p.Bodega?.Nombre,
             TipoItem = p.TipoItem == TipoItemProducto.Servicio ? "Servicio" : "Refaccion",
             NivelStock = p.NivelStock, NivelStockClase = p.NivelStockClase
         };
@@ -96,7 +106,10 @@ public class InventarioService
 
     public async Task UpdateAsync(InventarioDto dto)
     {
-        var p = await _db.Inventario.FindAsync(dto.Id) ?? throw new Exception("Producto no encontrado");
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
+        var p = await _db.Inventario
+            .FirstOrDefaultAsync(x => x.Id == dto.Id && x.TenantId == _tenantService.TenantId.Value)
+            ?? throw new Exception("Producto no encontrado");
         p.Nombre = dto.Nombre; p.SKU = dto.SKU; p.Descripcion = dto.Descripcion;
         p.Categoria = dto.Categoria; p.Stock = dto.Stock; p.StockMinimo = dto.StockMinimo;
         p.PrecioCompra = dto.PrecioCompra; p.PrecioVenta = dto.PrecioVenta; p.Proveedor = dto.Proveedor;
@@ -141,7 +154,9 @@ public class InventarioService
 
     public async Task AjustarStockAsync(Guid id, int cantidad, string tipo, Guid tenantId, string? observaciones = null)
     {
-        var p = await _db.Inventario.FindAsync(id) ?? throw new Exception("Producto no encontrado");
+        var p = await _db.Inventario
+            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId)
+            ?? throw new Exception("Producto no encontrado");
 
         var tipoMovimiento = tipo == "entrada" ? TipoMovimiento.AjusteEntrada : TipoMovimiento.AjusteSalida;
         p.Stock = tipo == "entrada" ? p.Stock + cantidad : p.Stock - cantidad;
@@ -177,7 +192,8 @@ public class InventarioService
 
         foreach (var item in itemsConProducto)
         {
-            var producto = await _db.Inventario.FindAsync(item.ProductoInventarioId!.Value);
+            var producto = await _db.Inventario
+                .FirstOrDefaultAsync(x => x.Id == item.ProductoInventarioId!.Value && x.TenantId == orden.TenantId);
             if (producto == null) continue;
 
             var cantidadDescontar = (int)Math.Ceiling(item.Cantidad);

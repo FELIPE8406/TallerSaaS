@@ -17,23 +17,25 @@ $(document).off('change', '#fechaDesde, #fechaHasta').on('change', '#fechaDesde,
 });
 
 $(document).off('click', '.export-btn').on('click', '.export-btn', function(e) {
+    e.preventDefault();
     const fmt = $(this).data('fmt');
-    if (fmt === 'excel' || fmt === 'pdf') {
-        e.preventDefault();
-        
-        const activePeriod = $('.period-btn.active').data('period') || 'trimestral';
-        if (activePeriod === 'personalizado') {
-            const desde = $('#fechaDesde').val();
-            const hasta = $('#fechaHasta').val();
-            if (!desde || !hasta) {
-                Swal.fire('Atención', 'Por favor selecciona las fechas "Desde" y "Hasta" antes de exportar.', 'warning');
-                return;
-            }
+    const activePeriod = $('.period-btn.active').data('period') || 'trimestral';
+    
+    if (activePeriod === 'personalizado') {
+        const desde = $('#fechaDesde').val();
+        const hasta = $('#fechaHasta').val();
+        if (!desde || !hasta) {
+            Swal.fire('Atención', 'Por favor selecciona las fechas "Desde" y "Hasta" antes de exportar.', 'warning');
+            return;
         }
-
-        const url = $(this).attr('data-url') || $(this).attr('href');
-        if (url) window.open(url, '_blank', 'noopener,noreferrer');
     }
+
+    const tipo = $(this).data('tipo');
+    const desde = $('#fechaDesde').val() || '';
+    const hasta = $('#fechaHasta').val() || '';
+    const url = buildUrl(tipo, fmt, activePeriod, desde, hasta);
+    
+    descargarArchivo(url);
 });
 
 function buildUrl(tipo, fmt, period, desde, hasta) {

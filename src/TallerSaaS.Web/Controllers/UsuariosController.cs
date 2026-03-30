@@ -37,9 +37,16 @@ public class UsuariosController : Controller
     [HttpGet]
     public IActionResult Crear() => View();
 
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Crear(string nombre, string email, string password, string role)
     {
+        var rolesPermitidos = new[] { "Admin", "Mecanico" };
+        if (!rolesPermitidos.Contains(role))
+        {
+            TempData["Error"] = "Rol no permitido.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var tenantId = _tenantService.TenantId;
         if (tenantId == null)
         {
@@ -87,7 +94,7 @@ public class UsuariosController : Controller
         return View();
     }
 
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Eliminar(string id)
     {
         var user = await _userManager.FindByIdAsync(id);

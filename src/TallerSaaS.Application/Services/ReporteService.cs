@@ -6,17 +6,23 @@ using QuestPDF.Infrastructure;
 using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services;
 
 public class ReporteService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentTenantService _tenantService;
 
-    public ReporteService(IApplicationDbContext db) => _db = db;
+    public ReporteService(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
     // ─── PDF Apple-Style: Factura por OrdenId (legado compatible) ────────────
-    public async Task<byte[]> GenerarFacturaPdfAsync(Guid ordenId, string tenantNombre, string? tenantLogo = null)
+    public async Task<byte[]> GenerarFacturaPdfAsync(Guid ordenId, string tenantNombre, string tenantNIT, string? tenantLogo = null)
     {
         try
         {
@@ -28,7 +34,7 @@ public class ReporteService
                 ?? throw new Exception("Orden no encontrada");
 
             return GenerarPdfAppleStyle(
-                tenantNombre, tenantNombre,
+                tenantNombre, $"NIT: {tenantNIT}",
                 orden.NumeroOrden,
                 orden.FechaEntrada,
                 orden.Vehiculo?.Cliente?.NombreCompleto ?? "",
@@ -49,7 +55,7 @@ public class ReporteService
     }
 
     // ─── PDF Apple-Style: Factura por FacturaId (nueva lógica multi-orden) ────
-    public async Task<byte[]> GenerarFacturaPdfPorFacturaAsync(Guid facturaId, string tenantNombre)
+    public async Task<byte[]> GenerarFacturaPdfPorFacturaAsync(Guid facturaId, string tenantNombre, string tenantNIT)
     {
         try
         {
@@ -73,7 +79,7 @@ public class ReporteService
             var ordenes       = string.Join(", ", factura.Ordenes.Select(o => o.NumeroOrden));
 
             return GenerarPdfAppleStyle(
-                tenantNombre, tenantNombre,
+                tenantNombre, $"NIT: {tenantNIT}",
                 factura.NumeroFactura,
                 factura.FechaEmision,
                 clienteNombre, clienteTel, clienteEmail,
@@ -121,8 +127,8 @@ public class ReporteService
                         {
                             c.Item().Text(tenantNombre)
                                 .Bold().FontSize(22).FontColor("#0A0A0A");
-                            c.Item().Text("Servicio Automotriz Profesional")
-                                .FontSize(10).FontColor("#888888").Italic();
+                            c.Item().Text(tenantSubtitulo)
+                                .FontSize(11).FontColor("#444444").Medium();
                         });
                         // Invoice badge
                         row.ConstantItem(140).AlignRight().Column(c =>
@@ -302,7 +308,7 @@ public class ReporteService
     // ─── Excel Pro: Clientes ──────────────────────────────────────────────────
     /// <param name="desde">Fecha de inicio (opcional). Si es null exporta todos los clientes activos.</param>
     /// <param name="hasta">Fecha de fin (opcional).</param>
-    public async Task<byte[]> ExportarClientesExcelAsync(DateTime? desde = null, DateTime? hasta = null)
+    public async Task<byte[]> ExportarClientesExcelAsync(string tenantNombre, string tenantNIT, DateTime? desde = null, DateTime? hasta = null)
     {
         try
         {
@@ -322,7 +328,7 @@ public class ReporteService
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Clientes");
 
-            AplicarEstiloTituloSheet(ws, "REPORTE DE CLIENTES", 7);
+            AplicarEstiloTituloSheet(ws, $"{tenantNombre} — NIT: {tenantNIT} — REPORTE DE CLIENTES", 7);
 
             var headers = new[] { "Nombre Completo", "Cédula/NIT", "Email", "Teléfono", "Dirección", "Vehículos", "Fecha Registro" };
             AplicarHeaders(ws, headers, 2);
@@ -356,7 +362,7 @@ public class ReporteService
     }
 
     // ─── Excel Pro: Ventas ────────────────────────────────────────────────────
-    public async Task<byte[]> ExportarVentasExcelAsync(DateTime? desde = null, DateTime? hasta = null)
+    public async Task<byte[]> ExportarVentasExcelAsync(string tenantNombre, string tenantNIT, DateTime? desde = null, DateTime? hasta = null)
     {
         try
         {
@@ -375,7 +381,7 @@ public class ReporteService
             var ws = workbook.Worksheets.Add("Ventas");
             int totalCols = 12;
 
-            AplicarEstiloTituloSheet(ws, $"REPORTE DE VENTAS — {desde:dd/MM/yyyy} al {hasta:dd/MM/yyyy}", totalCols);
+            AplicarEstiloTituloSheet(ws, $"{tenantNombre} — NIT: {tenantNIT} — REPORTE DE VENTAS — {desde:dd/MM/yyyy} al {hasta:dd/MM/yyyy}", totalCols);
 
             var headers = new[] { "No. Orden", "Cliente", "Vehículo", "Placa", "Estado", "Fecha Entrada", "Fecha Salida", "Subtotal", "Descuento", "IVA", "Total", "Pagada" };
             AplicarHeaders(ws, headers, 2);
@@ -422,7 +428,7 @@ public class ReporteService
     // ─── Excel Pro: Facturas ──────────────────────────────────────────────────
     /// <param name="desde">Fecha de inicio del periodo. Si es null exporta todas las facturas.</param>
     /// <param name="hasta">Fecha de fin del periodo. Si es null exporta hasta hoy.</param>
-    public async Task<byte[]> ExportarFacturasExcelAsync(DateTime? desde = null, DateTime? hasta = null)
+    public async Task<byte[]> ExportarFacturasExcelAsync(string tenantNombre, string tenantNIT, DateTime? desde = null, DateTime? hasta = null)
     {
         try
         {
@@ -440,8 +446,8 @@ public class ReporteService
                 .ToListAsync();
 
             var titulo = desde.HasValue && hasta.HasValue
-                ? $"REPORTE DE FACTURAS — {desde:dd/MM/yyyy} al {hasta:dd/MM/yyyy}"
-                : "REPORTE DE FACTURAS";
+                ? $"{tenantNombre} — NIT: {tenantNIT} — REPORTE DE FACTURAS — {desde:dd/MM/yyyy} al {hasta:dd/MM/yyyy}"
+                : $"{tenantNombre} — NIT: {tenantNIT} — REPORTE DE FACTURAS";
 
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Facturas");
@@ -550,7 +556,7 @@ public class ReporteService
     }
 
     // ─── Excel Accounting: Libro Auxiliar per Tercero ─────────────────────────
-    public async Task<byte[]> ExportarLibroAuxiliarExcelAsync(Guid? terceroId = null, DateTime? desde = null, DateTime? hasta = null)
+    public async Task<byte[]> ExportarLibroAuxiliarExcelAsync(string tenantNombre, string tenantNIT, Guid? terceroId = null, DateTime? desde = null, DateTime? hasta = null)
     {
         try
         {
@@ -573,7 +579,7 @@ public class ReporteService
             var ws = workbook.Worksheets.Add("Libro Auxiliar");
             int totalCols = 7;
 
-            AplicarEstiloTituloSheet(ws, "LIBRO AUXILIAR POR TERCERO", totalCols);
+            AplicarEstiloTituloSheet(ws, $"{tenantNombre} — NIT: {tenantNIT} — LIBRO AUXILIAR POR TERCERO", totalCols);
 
             var headers = new[] { "Fecha", "Cuenta", "Tercero", "Referencia", "Descripción", "Débito", "Crédito" };
             AplicarHeaders(ws, headers, 2);
@@ -605,7 +611,7 @@ public class ReporteService
     }
 
     // ─── Excel Accounting: Balance de Prueba ──────────────────────────────────
-    public async Task<byte[]> ExportarBalancePruebaExcelAsync(DateTime? desde = null, DateTime? hasta = null)
+    public async Task<byte[]> ExportarBalancePruebaExcelAsync(string tenantNombre, string tenantNIT, DateTime? desde = null, DateTime? hasta = null)
     {
         try
         {
@@ -616,7 +622,7 @@ public class ReporteService
             var ws = workbook.Worksheets.Add("Balance de Prueba");
             int totalCols = 5;
 
-            AplicarEstiloTituloSheet(ws, "BALANCE DE PRUEBA", totalCols);
+            AplicarEstiloTituloSheet(ws, $"{tenantNombre} — NIT: {tenantNIT} — BALANCE DE PRUEBA", totalCols);
 
             var headers = new[] { "Código", "Cuenta", "Débitos", "Créditos", "Saldo Final" };
             AplicarHeaders(ws, headers, 2);
@@ -660,16 +666,13 @@ public class ReporteService
     }
 
     // ─── PDF Accounting: Certificado de Retenciones (Premium) ──────────────────
-    public async Task<byte[]> GenerarCertificadoRetencionesPdfAsync(Guid terceroId, int anio)
+    public async Task<byte[]> GenerarCertificadoRetencionesPdfAsync(Guid terceroId, int anio, string tenantNombre, string tenantNIT, string tenantCiudad)
     {
         try
         {
             var tercero = await _db.Clientes.FindAsync(terceroId)
                 ?? throw new Exception("Tercero no encontrado");
 
-            // Fetch current tenant info (filtered by global query filter in DB context)
-            var tenant = await _db.Tenants.FirstOrDefaultAsync()
-                ?? throw new Exception("Configuración del taller no encontrada.");
 
             var retenciones = await _db.LineasAsientosContables
                 .Include(l => l.AsientoContable)
@@ -693,8 +696,8 @@ public class ReporteService
 
                     page.Header().Column(col =>
                     {
-                        col.Item().Text(tenant.Nombre).Bold().FontSize(18).AlignCenter();
-                        col.Item().Text($"NIT: {tenant.NIT ?? "N/A"}").FontSize(10).AlignCenter();
+                        col.Item().Text(tenantNombre).Bold().FontSize(18).AlignCenter();
+                        col.Item().Text($"NIT: {tenantNIT}").FontSize(10).AlignCenter();
                         col.Item().PaddingTop(10).Text("CERTIFICADO DE RETENCIÓN EN LA FUENTE").Bold().AlignCenter();
                         col.Item().Text($"AÑO GRAVABLE {anio}").AlignCenter();
                     });
@@ -725,7 +728,7 @@ public class ReporteService
 
                         col.Item().PaddingTop(20).AlignRight().Text($"TOTAL RETENIDO: ${totalRetenido:N0}").Bold();
 
-                        col.Item().PaddingTop(40).Text($"Expedido en la ciudad de {tenant.Ciudad ?? "N/A"}, el " + DateTime.Now.ToString("dd/MM/yyyy"));
+                        col.Item().PaddingTop(40).Text($"Expedido en la ciudad de {tenantCiudad}, el " + DateTime.Now.ToString("dd/MM/yyyy"));
                     });
 
                     page.Footer().AlignCenter().Text(x => {

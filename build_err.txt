@@ -1,0 +1,15 @@
+  Determinando los proyectos que se van a restaurar...
+  Todos los proyectos est??n actualizados para la restauraci??n.
+  TallerSaaS.Domain -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.dll
+  TallerSaaS.Shared -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Shared\bin\Debug\net9.0\TallerSaaS.Shared.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\Services\ReporteService.cs(731,84): error CS0103: El nombre 'tenant' no existe en el contexto actual [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\TallerSaaS.Application.csproj]
+
+ERROR al compilar.
+
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\Services\ReporteService.cs(731,84): error CS0103: El nombre 'tenant' no existe en el contexto actual [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\TallerSaaS.Application.csproj]
+    0 Advertencia(s)
+    1 Errores
+
+Tiempo transcurrido 00:00:01.64
+
+Hay actualizaciones de carga de trabajo disponibles. Ejecute "dotnet workload list" para obtener m??s informaci??n.

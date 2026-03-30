@@ -52,17 +52,17 @@
             <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius:12px;">
                 <li><h6 class="dropdown-header">Reportes</h6></li>
                 <li>
-                    <a class="dropdown-item" asp-controller="Facturas" asp-action="DescargarExcel">
+                    <a class="dropdown-item" href="#" onclick="event.preventDefault(); descargarArchivo('@Url.Action("DescargarExcel", "Facturas")');">
                         📊 Facturas Excel Pro
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item" asp-controller="Reportes" asp-action="VentasExcel">
+                    <a class="dropdown-item" href="#" onclick="event.preventDefault(); descargarArchivo('@Url.Action("VentasExcel", "Reportes")');">
                         📈 Ventas Excel
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item" asp-controller="Reportes" asp-action="ClientesExcel">
+                    <a class="dropdown-item" href="#" onclick="event.preventDefault(); descargarArchivo('@Url.Action("ClientesExcel", "Reportes")');">
                         👥 Clientes Excel
                     </a>
                 </li>
@@ -86,7 +86,7 @@
 <div class="kpi-grid">
 
     <!-- Ventas del Mes COP -->
-    <a asp-controller="Reportes" asp-action="VentasExcel" class="kpi-glass text-decoration-none">
+    <a href="#" onclick="event.preventDefault(); descargarArchivo('@Url.Action("VentasExcel", "Reportes")');" class="kpi-glass text-decoration-none">
         <div class="kpi-glass-icon" style="--icon-bg:rgba(0,214,50,.08);--icon-color:#00d632;">
             <i class="bi bi-cash-stack"></i>
         </div>

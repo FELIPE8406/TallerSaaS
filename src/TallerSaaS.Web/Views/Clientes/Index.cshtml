@@ -9,7 +9,7 @@
     <p class="page-subtitle">@ViewBag.Total clientes registrados</p>
   </div>
   <div class="d-flex gap-2">
-    <a asp-controller="Reportes" asp-action="ClientesExcel" class="btn btn-outline-secondary">
+    <a asp-controller="Reportes" asp-action="ClientesExcel" class="btn btn-outline-secondary no-spa">
       <i class="bi bi-file-earmark-excel me-1"></i>Exportar
     </a>
     <a asp-controller="Clientes" asp-action="Crear" class="btn btn-primary">
@@ -65,9 +65,14 @@
             <td class="d-none d-md-table-cell" style="color:var(--text-muted);">@c.Telefono</td>
             <td><span class="badge bg-primary">@c.TotalVehiculos</span></td>
             <td>
-              <span class="badge @(c.Activo ? "bg-success" : "bg-secondary")">
-                @(c.Activo ? "Activo" : "Inactivo")
-              </span>
+              <form asp-action="ToggleStatus" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@c.Id" />
+                <button type="submit" class="badge @(c.Activo ? "bg-success" : "bg-secondary") border-0" 
+                        title="Click para @(c.Activo ? "Desactivar" : "Activar")" style="cursor:pointer">
+                  @(c.Activo ? "Activo" : "Inactivo")
+                </button>
+              </form>
             </td>
             <td>
               <div class="d-flex gap-1">

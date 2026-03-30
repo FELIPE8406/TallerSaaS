@@ -31,7 +31,8 @@ $(document).off('click', '.btn-ver-detalle').on('click', '.btn-ver-detalle', fun
 });
 
 $(document).off('click', '.btn-descargar-pdf').on('click', '.btn-descargar-pdf', function() {
-    window.location.href = `/Nomina/DescargarPdf/${$(this).data('id')}`;
+    const url = `/Nomina/DescargarPdf/${$(this).data('id')}`;
+    descargarArchivo(url);
 });
 
 $(document).off('click', '.btn-reportar-dian').on('click', '.btn-reportar-dian', function() {

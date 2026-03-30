@@ -24,12 +24,14 @@ public class VehiculosController : Controller
 
     public IActionResult Index()
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         return View();
     }
 
     [HttpGet]
     public async Task<IActionResult> BuscarJson(string q, Guid? clienteId = null)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var vehiculos = await _vehiculoService.GetAllAsync(clienteId, q);
         return Json(vehiculos.Select(v => new {
             id = v.Id,
@@ -40,13 +42,14 @@ public class VehiculosController : Controller
     [HttpGet]
     public async Task<IActionResult> GetPaged(int page = 1, int size = 20, Guid? clienteId = null)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var result = await _vehiculoService.GetAllPagedAsync(page, size, clienteId);
         return Json(result);
     }
 
-    // ── Crear ─────────────────────────────────────────────────────────────────
     public async Task<IActionResult> Crear(Guid? clienteId)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         await PopularClientes();
         return View(new VehiculoDto { ClienteId = clienteId ?? Guid.Empty });
     }
@@ -61,11 +64,12 @@ public class VehiculosController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ── Editar ────────────────────────────────────────────────────────────────
     public async Task<IActionResult> Editar(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var vehiculo = await _vehiculoService.GetByIdAsync(id);
         if (vehiculo == null) return NotFound();
+        if (vehiculo.TenantId != _tenantService.TenantId.Value) return Forbid();
         await PopularClientes();
         return View(vehiculo);
     }
@@ -74,15 +78,22 @@ public class VehiculosController : Controller
     public async Task<IActionResult> Editar(VehiculoDto dto)
     {
         if (!ModelState.IsValid) { await PopularClientes(); return View(dto); }
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var existing = await _vehiculoService.GetByIdAsync(dto.Id);
+        if (existing == null) return NotFound();
+        if (existing.TenantId != _tenantService.TenantId.Value) return Forbid();
         await _vehiculoService.UpdateAsync(dto);
         TempData["Exito"] = "Vehículo actualizado.";
         return RedirectToAction(nameof(Index));
     }
 
-    // ── Eliminar ──────────────────────────────────────────────────────────────
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Eliminar(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var vehiculo = await _vehiculoService.GetByIdAsync(id);
+        if (vehiculo == null) return NotFound();
+        if (vehiculo.TenantId != _tenantService.TenantId.Value) return Forbid();
         try
         {
             await _vehiculoService.DeleteAsync(id);
@@ -95,10 +106,8 @@ public class VehiculosController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ── Private ───────────────────────────────────────────────────────────────
     private async Task PopularClientes()
     {
-        // Push Take(20) to SQL — no full table scan needed for dropdowns
         ViewBag.Clientes = await _clienteService.GetTopAsync(20);
     }
 }

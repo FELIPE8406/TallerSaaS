@@ -3,6 +3,7 @@ using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Extensions;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services;
 
@@ -12,8 +13,13 @@ namespace TallerSaaS.Application.Services;
 public class BodegaService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentTenantService _tenantService;
 
-    public BodegaService(IApplicationDbContext db) => _db = db;
+    public BodegaService(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
     // ── Consultas ──────────────────────────────────────────────────────────────
     public async Task<List<BodegaDto>> GetAllAsync()
@@ -23,6 +29,7 @@ public class BodegaService
             .Select(b => new BodegaDto
             {
                 Id             = b.Id,
+                TenantId       = b.TenantId,
                 Nombre         = b.Nombre,
                 Descripcion    = b.Descripcion,
                 Ubicacion      = b.Ubicacion,
@@ -40,6 +47,7 @@ public class BodegaService
         return new BodegaDto
         {
             Id             = b.Id,
+            TenantId       = b.TenantId,
             Nombre         = b.Nombre,
             Descripcion    = b.Descripcion,
             Ubicacion      = b.Ubicacion,
@@ -100,7 +108,10 @@ public class BodegaService
 
     public async Task UpdateAsync(BodegaDto dto)
     {
-        var b = await _db.Bodegas.FindAsync(dto.Id) ?? throw new Exception("Bodega no encontrada");
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
+        var b = await _db.Bodegas
+            .FirstOrDefaultAsync(x => x.Id == dto.Id && x.TenantId == _tenantService.TenantId.Value)
+            ?? throw new Exception("Bodega no encontrada");
         b.Nombre      = dto.Nombre;
         b.Descripcion = dto.Descripcion;
         b.Ubicacion   = dto.Ubicacion;
@@ -116,7 +127,8 @@ public class BodegaService
     public async Task TrasladarAsync(Guid productoId, Guid bodegaOrigenId, Guid bodegaDestinoId,
         int cantidad, Guid tenantId, string? observaciones = null)
     {
-        var producto = await _db.Inventario.FindAsync(productoId)
+        var producto = await _db.Inventario
+            .FirstOrDefaultAsync(x => x.Id == productoId && x.TenantId == tenantId)
             ?? throw new Exception("Producto no encontrado.");
 
         if (producto.Stock < cantidad)

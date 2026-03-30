@@ -34,6 +34,7 @@ public class OrdenesController : Controller
 
     public IActionResult Index(int? estado)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         ViewBag.EstadoFiltro = estado;
         return View();
     }
@@ -41,6 +42,7 @@ public class OrdenesController : Controller
     [HttpGet]
     public async Task<IActionResult> GetPaged(int page = 1, int size = 20, int? estado = null)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         EstadoOrden? estadoEnum = estado.HasValue ? (EstadoOrden)estado.Value : null;
         var paged = await _ordenService.GetAllPagedAsync(page, size, estadoEnum);
         return Json(paged);
@@ -48,15 +50,16 @@ public class OrdenesController : Controller
 
     public async Task<IActionResult> Detalle(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var orden = await _ordenService.GetByIdAsync(id);
         if (orden == null) return NotFound();
+        if (orden.TenantId != _tenantService.TenantId.Value) return Forbid();
         return View(orden);
     }
 
     public async Task<IActionResult> Crear()
     {
-        // Optimization: push Take(20) to SQL — no full table scan.
-        // Frontend will use Buscar endpoints for the rest.
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         ViewBag.Clientes  = await _clienteService.GetTopAsync(20);
         ViewBag.Vehiculos = await _vehiculoService.GetTopAsync(20);
         return View(new OrdenDto());
@@ -66,6 +69,17 @@ public class OrdenesController : Controller
     public async Task<IActionResult> Crear(OrdenDto dto)
     {
         if (!_tenantService.TenantId.HasValue) return Forbid();
+
+        if (!ModelState.IsValid || dto.VehiculoId == Guid.Empty)
+        {
+            if (dto.VehiculoId == Guid.Empty)
+                ModelState.AddModelError("VehiculoId", "Debe seleccionar un vehículo.");
+
+            ViewBag.Clientes  = await _clienteService.GetTopAsync(20);
+            ViewBag.Vehiculos = await _vehiculoService.GetTopAsync(20);
+            return View(dto);
+        }
+
         var orden = await _ordenService.CreateAsync(dto, _tenantService.TenantId.Value);
         TempData["Exito"] = $"Orden {orden.NumeroOrden} creada.";
         return RedirectToAction(nameof(Detalle), new { id = orden.Id });
@@ -74,6 +88,10 @@ public class OrdenesController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> CambiarEstado(Guid id, int estado)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var orden = await _ordenService.GetByIdAsync(id);
+        if (orden == null) return NotFound();
+        if (orden.TenantId != _tenantService.TenantId.Value) return Forbid();
         try
         {
             await _ordenService.CambiarEstadoAsync(id, (EstadoOrden)estado);
@@ -81,8 +99,6 @@ public class OrdenesController : Controller
         }
         catch (InvalidOperationException ex) when (ex.Message == "REQUIERE_FACTURA")
         {
-            // La orden no tiene factura pagada: bloquear el avance a Entregado
-            // y redirigir al detalle con una bandera para mostrar el aviso visual.
             TempData["RequiereFactura"] = true;
             TempData["Error"] = "La orden debe estar facturada y pagada antes de marcarse como Entregado.";
         }
@@ -96,6 +112,10 @@ public class OrdenesController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AgregarItem(Guid ordenId, ItemOrdenDto dto)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var orden = await _ordenService.GetByIdAsync(ordenId);
+        if (orden == null) return NotFound();
+        if (orden.TenantId != _tenantService.TenantId.Value) return Forbid();
         await _ordenService.AddItemAsync(ordenId, dto);
         return RedirectToAction(nameof(Detalle), new { id = ordenId });
     }
@@ -103,8 +123,13 @@ public class OrdenesController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> AgregarItemJson(Guid ordenId, ItemOrdenDto dto)
     {
+        if (!_tenantService.TenantId.HasValue) return Json(new { ok = false, error = "Tenant no identificado." });
         try
         {
+            var ordenPreCheck = await _ordenService.GetByIdAsync(ordenId);
+            if (ordenPreCheck == null) return Json(new { ok = false, error = "Orden no encontrada." });
+            if (ordenPreCheck.TenantId != _tenantService.TenantId.Value) return Json(new { ok = false, error = "Acceso no autorizado." });
+
             await _ordenService.AddItemAsync(ordenId, dto);
             var orden = await _ordenService.GetByIdAsync(ordenId);
             if (orden == null)
@@ -118,47 +143,46 @@ public class OrdenesController : Controller
         }
         catch (Exception ex)
         {
-            // Log the real exception — visible in dotnet run console and VS Output
             _logger.LogError(ex, "Error en AgregarItemJson para orden {OrdenId}. DTO: Desc={Desc} Tipo={Tipo} Cant={Cant} Precio={Precio}",
                 ordenId, dto.Descripcion, dto.Tipo, dto.Cantidad, dto.PrecioUnitario);
-
-            // Return real message to UI so user can see root cause
             return Json(new { ok = false, error = $"[{ex.GetType().Name}] {ex.Message}" });
         }
     }
 
-    /// <summary>
-    /// AJAX endpoint: returns current order state (items + totals) as JSON.
-    /// Used by EliminarItem redirect to refresh the table.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetOrdenJson(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var orden = await _ordenService.GetByIdAsync(id);
         if (orden == null) return NotFound();
+        if (orden.TenantId != _tenantService.TenantId.Value) return Forbid();
         return Json(orden);
     }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> EliminarItem(Guid ordenId, Guid itemId)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var orden = await _ordenService.GetByIdAsync(ordenId);
+        if (orden == null) return NotFound();
+        if (orden.TenantId != _tenantService.TenantId.Value) return Forbid();
         await _ordenService.RemoveItemAsync(ordenId, itemId);
         return RedirectToAction(nameof(Detalle), new { id = ordenId });
     }
 
     public IActionResult DescargarPdf(Guid id)
     {
-        // Will be handled by ReportesController
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         return RedirectToAction("FacturaPdf", "Reportes", new { ordenId = id });
     }
 
-    /// <summary>
-    /// AJAX: Búsqueda de productos para el selector dinámico al agregar ítems.
-    /// GET /Ordenes/BuscarProductos?q=filtro&amp;tipo=Refaccion|Servicio
-    /// </summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ActualizarRetencion(Guid id, bool aplicar, decimal porcentaje)
     {
+        if (!_tenantService.TenantId.HasValue) return Json(new { ok = false, error = "Tenant no identificado." });
+        var orden = await _ordenService.GetByIdAsync(id);
+        if (orden == null) return Json(new { ok = false, error = "Orden no encontrada." });
+        if (orden.TenantId != _tenantService.TenantId.Value) return Json(new { ok = false, error = "Acceso no autorizado." });
         try
         {
             await _ordenService.UpdateRetentionAsync(id, aplicar, porcentaje);
@@ -173,6 +197,7 @@ public class OrdenesController : Controller
     [HttpGet]
     public async Task<IActionResult> BuscarProductos(string q = "", string? tipo = null)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
             return Json(Array.Empty<object>());
 

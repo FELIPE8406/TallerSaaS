@@ -56,6 +56,17 @@
         <span asp-validation-for="Direccion" class="text-danger" style="font-size:12px;"></span>
       </div>
 
+      @if (esEdicion)
+      {
+        <div class="mb-4">
+          <div class="form-check form-switch p-0 d-flex align-items-center gap-3">
+             <input asp-for="Activo" class="form-check-input ms-0 shadow-none" type="checkbox" role="switch" id="switchActivo" style="width: 40px; height: 20px; cursor: pointer;">
+             <label class="form-check-label fw-bold mb-0" for="switchActivo" style="cursor: pointer;">Cliente Activo</label>
+          </div>
+          <small class="text-muted">Si se desactiva, el cliente no aparecerá en las búsquedas de nuevas órdenes.</small>
+        </div>
+      }
+
       <hr class="section-divider" />
 
       <div class="d-flex gap-2 justify-content-end">

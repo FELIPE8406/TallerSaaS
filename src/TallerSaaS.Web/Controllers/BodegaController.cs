@@ -18,15 +18,18 @@ public class BodegaController : Controller
         _tenantService  = tenantService;
     }
 
-    // ── Lista de Bodegas ───────────────────────────────────────────────────────
     public async Task<IActionResult> Index()
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var bodegas = await _bodegaService.GetAllAsync();
         return View(bodegas);
     }
 
-    // ── Crear Bodega ───────────────────────────────────────────────────────────
-    public IActionResult Crear() => View(new BodegaDto());
+    public IActionResult Crear()
+    {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        return View(new BodegaDto());
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Crear(BodegaDto dto)
@@ -38,11 +41,12 @@ public class BodegaController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ── Editar Bodega ──────────────────────────────────────────────────────────
     public async Task<IActionResult> Editar(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var bodega = await _bodegaService.GetByIdAsync(id);
         if (bodega == null) return NotFound();
+        if (bodega.TenantId != _tenantService.TenantId.Value) return Forbid();
         return View(bodega);
     }
 
@@ -50,6 +54,10 @@ public class BodegaController : Controller
     public async Task<IActionResult> Editar(BodegaDto dto)
     {
         if (!ModelState.IsValid) return View(dto);
+        if (!_tenantService.TenantId.HasValue) return Forbid();
+        var existing = await _bodegaService.GetByIdAsync(dto.Id);
+        if (existing == null) return NotFound();
+        if (existing.TenantId != _tenantService.TenantId.Value) return Forbid();
         await _bodegaService.UpdateAsync(dto);
         TempData["Exito"] = "Bodega actualizada.";
         return RedirectToAction(nameof(Index));
@@ -57,6 +65,7 @@ public class BodegaController : Controller
 
     public async Task<IActionResult> Movimientos(Guid? bodegaId)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var bodegas     = await _bodegaService.GetAllAsync();
         ViewBag.BodegaId = bodegaId;
         ViewBag.Bodegas  = bodegas;
@@ -66,13 +75,14 @@ public class BodegaController : Controller
     [HttpGet]
     public async Task<IActionResult> GetMovimientosPaged(int page = 1, int size = 10, Guid? bodegaId = null)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var paged = await _bodegaService.GetMovimientosPagedAsync(page, size, bodegaId);
         return Json(paged);
     }
 
-    // ── Traslado entre Bodegas ─────────────────────────────────────────────────
     public async Task<IActionResult> Traslado()
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         ViewBag.Bodegas = await _bodegaService.GetAllAsync();
         return View();
     }
@@ -82,6 +92,8 @@ public class BodegaController : Controller
         Guid bodegaDestinoId, int cantidad, string? observaciones)
     {
         if (!_tenantService.TenantId.HasValue) return Forbid();
+        var producto = await _bodegaService.GetProductoStockInfoAsync(productoId);
+        if (producto == null) return NotFound();
         try
         {
             await _bodegaService.TrasladarAsync(
@@ -96,10 +108,10 @@ public class BodegaController : Controller
         return RedirectToAction(nameof(Movimientos));
     }
 
-    // ── AJAX: Stock info para el panel de resumen dinámico en Traslado ────────
     [HttpGet]
     public async Task<IActionResult> StockInfo(Guid productoId)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var producto = await _bodegaService.GetProductoStockInfoAsync(productoId);
         if (producto == null) return NotFound();
         return Json(producto);

@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Interfaces;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services.Exporters;
 
@@ -12,12 +13,17 @@ namespace TallerSaaS.Application.Services.Exporters;
 public class TxtExportStrategy : IExportStrategy
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentTenantService _tenantService;
     public string ContentType => "text/plain";
     public string FileExtension => "txt";
 
-    public TxtExportStrategy(IApplicationDbContext db) => _db = db;
+    public TxtExportStrategy(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
-    public async Task<byte[]> ExportarOrdenesAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarOrdenesAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var ordenes = await _db.Ordenes
             .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
@@ -26,6 +32,8 @@ public class TxtExportStrategy : IExportStrategy
             .ToListAsync();
 
         var sb = new StringBuilder();
+        sb.AppendLine(tenantNombre.ToUpper());
+        sb.AppendLine($"NIT: {tenantNIT}");
         sb.AppendLine($"REPORTE DE ÓRDENES — Período: {filtro.Desde:dd/MM/yyyy} al {filtro.Hasta:dd/MM/yyyy}");
         sb.AppendLine(new string('=', 110));
         sb.AppendLine($"{"No. Orden",-18} {"Cliente",-28} {"Estado",-22} {"Fecha Entrada",-15} {"Total",12}");
@@ -42,7 +50,7 @@ public class TxtExportStrategy : IExportStrategy
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
-    public async Task<byte[]> ExportarFacturasAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarFacturasAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var facturas = await _db.Facturas
             .Include(f => f.Ordenes)
@@ -51,6 +59,8 @@ public class TxtExportStrategy : IExportStrategy
             .ToListAsync();
 
         var sb = new StringBuilder();
+        sb.AppendLine(tenantNombre.ToUpper());
+        sb.AppendLine($"NIT: {tenantNIT}");
         sb.AppendLine($"REPORTE DE FACTURAS — Período: {filtro.Desde:dd/MM/yyyy} al {filtro.Hasta:dd/MM/yyyy}");
         sb.AppendLine(new string('=', 80));
         sb.AppendLine($"{"No. Factura",-20} {"Fecha Emisión",-15} {"Órdenes",8} {"Subtotal",14} {"Descuento",12} {"IVA",12} {"Total",14}");
@@ -67,7 +77,7 @@ public class TxtExportStrategy : IExportStrategy
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
-    public async Task<byte[]> ExportarClientesVehiculosAsync(ReporteFilter filtro)
+    public async Task<byte[]> ExportarClientesVehiculosAsync(ReporteFilter filtro, string tenantNombre, string tenantNIT)
     {
         var clientes = await _db.Clientes
             .Include(c => c.Vehiculos)
@@ -76,6 +86,8 @@ public class TxtExportStrategy : IExportStrategy
             .ToListAsync();
 
         var sb = new StringBuilder();
+        sb.AppendLine(tenantNombre.ToUpper());
+        sb.AppendLine($"NIT: {tenantNIT}");
         sb.AppendLine($"RELACIÓN CLIENTE - VEHÍCULO — Período: {filtro.Desde:dd/MM/yyyy} al {filtro.Hasta:dd/MM/yyyy}");
         sb.AppendLine(new string('=', 90));
         sb.AppendLine($"{"Cliente",-30} {"Teléfono",-16} {"Vehículo",-30} {"Placa",-10}");

@@ -135,7 +135,7 @@
       </div>
     </aside>
 
-    <div class="main-wrapper">
+    <div class="main-wrapper d-flex flex-column">
       <header class="topbar">
         <button class="btn-toggle-sidebar" onclick="toggleSidebar()" aria-label="Menú">
           <i class="bi bi-list"></i>
@@ -158,7 +158,7 @@
         </div>
       </header>
 
-      <main class="page-content">
+      <main class="page-content d-flex flex-column gap-3 w-100">
         @if (TempData["Exito"] != null)
         {
           <div class="alert alert-success alert-flash">

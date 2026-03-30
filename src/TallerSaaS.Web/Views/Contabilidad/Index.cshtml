@@ -91,10 +91,14 @@
                 <div class="mt-auto">
                     @if (isPremium)
                     {
-                        <form asp-action="LibroAuxiliarExcel" method="get">
+                        <form onsubmit="event.preventDefault(); descargarContabilidad(this, '/Contabilidad/LibroAuxiliarExcel');">
                             <div class="mb-3">
-                                <label class="text-secondary small mb-1">PeriodoDesde</label>
+                                <label class="text-secondary small mb-1">Periodo Desde</label>
                                 <input type="date" name="desde" class="form-control form-control-sm bg-dark border-secondary text-white border-opacity-50" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-secondary small mb-1">Periodo Hasta</label>
+                                <input type="date" name="hasta" class="form-control form-control-sm bg-dark border-secondary text-white border-opacity-50" />
                             </div>
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="bi bi-file-earmark-excel me-2"></i> Exportar Excel
@@ -119,7 +123,7 @@
                 <div class="mt-auto">
                     @if (isPremium)
                     {
-                        <form asp-action="BalancePruebaExcel" method="get">
+                        <form onsubmit="event.preventDefault(); descargarContabilidad(this, '/Contabilidad/BalancePruebaExcel');">
                             <button type="submit" class="btn btn-outline-info w-100">
                                 <i class="bi bi-file-earmark-excel me-2"></i> Generar Balance
                             </button>
@@ -169,7 +173,7 @@
                     <h5 class="modal-title text-white">Generar Certificado Tributario</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form asp-action="CertificadoRetencionesPdf" method="get">
+                <form onsubmit="event.preventDefault(); descargarContabilidad(this, '/Contabilidad/CertificadoRetencionesPdf');">
                     <div class="modal-body p-4">
                         <div class="mb-4">
                             <label class="form-label text-secondary small fw-bold text-uppercase">Tercero (Cliente)</label>
@@ -198,6 +202,31 @@
         </div>
     </div>
 }
+
+<script>
+    function descargarContabilidad(form, url) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+        for (const [key, value] of formData.entries()) {
+            if (value) params.append(key, value);
+        }
+        const fullUrl = url + (url.includes('?') ? '&' : '?') + params.toString();
+        
+        // Use the global descargarArchivo function from site.js
+        if (typeof descargarArchivo === 'function') {
+            descargarArchivo(fullUrl);
+            
+            // Close modal if it's the certificate modal
+            const modalEl = form.closest('.modal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+        } else {
+            window.location.href = fullUrl;
+        }
+    }
+</script>
 
 <style>
     .stat-card:hover { transform: translateY(-5px); transition: transform 0.3s ease; }

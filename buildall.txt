@@ -1,0 +1,20 @@
+﻿  TallerSaaS.Shared -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Shared\bin\Debug\net9.0\TallerSaaS.Shared.dll
+  TallerSaaS.Domain -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Domain\bin\Debug\net9.0\TallerSaaS.Domain.dll
+  TallerSaaS.Application -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Application\bin\Debug\net9.0\TallerSaaS.Application.dll
+  TallerSaaS.Infrastructure -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Infrastructure\bin\Debug\net9.0\TallerSaaS.Infrastructure.dll
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Controllers\HomeController.cs(33,106): warning CS8602: Desreferencia de una referencia posiblemente NULL. [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Controllers\ReportesController.cs(183,14): warning CS0219: La variable 'esExcel' est├í asignada pero su valor nunca se usa [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Views\EmpleadoContrato\Index.cshtml(124,53): warning CS8602: Desreferencia de una referencia posiblemente NULL. [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+  TallerSaaS.Web -> C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\bin\Debug\net9.0\TallerSaaS.Web.dll
+
+Compilaci├│n correcta.
+
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Controllers\HomeController.cs(33,106): warning CS8602: Desreferencia de una referencia posiblemente NULL. [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Controllers\ReportesController.cs(183,14): warning CS0219: La variable 'esExcel' est├í asignada pero su valor nunca se usa [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\Views\EmpleadoContrato\Index.cshtml(124,53): warning CS8602: Desreferencia de una referencia posiblemente NULL. [C:\Users\Usuario\.gemini\antigravity\scratch\TallerSaaS\src\TallerSaaS.Web\TallerSaaS.Web.csproj]
+    3 Advertencia(s)
+    0 Errores
+
+Tiempo transcurrido 00:00:19.18
+
+Hay actualizaciones de carga de trabajo disponibles. Ejecute "dotnet workload list" para obtener m├ís informaci├│n.

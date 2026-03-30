@@ -31,29 +31,27 @@ public class AgendaController : Controller
 
     public async Task<IActionResult> Index()
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var tenantId = _tenantService.TenantId;
-        
-        // Get all users of the current tenant (Admins can also be mechanics in small workshops)
+
         var users = await _userManager.Users
             .Where(u => u.TenantId == tenantId)
             .OrderBy(u => u.NombreCompleto)
             .ToListAsync();
-            
+
         var userIds = users.Select(u => u.Id).ToList();
-        
-        // Load active mechanic availabilities
+
         var availabilities = await _db.MechanicAvailabilities
             .Where(a => a.TenantId == tenantId && userIds.Contains(a.MechanicId) && a.IsActive)
             .ToListAsync();
 
-        var mechanicsList = users.Select(m => new 
-        { 
-            Id = m.Id, 
+        var mechanicsList = users.Select(m => new
+        {
+            Id = m.Id,
             NombreCompleto = m.NombreCompleto,
-            // FullCalendar format for businessHours
             BusinessHours = availabilities
                 .Where(a => a.MechanicId == m.Id)
-                .Select(a => new 
+                .Select(a => new
                 {
                     daysOfWeek = new[] { a.DayOfWeek },
                     startTime = a.StartTime.ToString(@"hh\:mm"),
@@ -61,30 +59,29 @@ public class AgendaController : Controller
                 })
                 .ToList()
         }).ToList();
-            
+
         ViewBag.Mechanics = mechanicsList;
-        
-        // Clients and Vehicles for the modal
+
         ViewBag.Clientes = await _db.Clientes.OrderBy(c => c.NombreCompleto)
             .Select(c => new { c.Id, c.NombreCompleto }).ToListAsync();
-            
+
         return View();
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAppointments(DateTime start, DateTime end)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         try
         {
             var appointments = await _appointmentService.GetAppointmentsAsync(start, end);
-            
-            // Format for FullCalendar
+
             var events = appointments.Select(a => new
             {
                 id = a.Id,
                 resourceId = a.MechanicId,
                 title = $"{a.ClienteNombre} - {a.VehiculoDescripcion}",
-                start = a.StartDateTime.ToString("yyyy-MM-ddTHH:mm:ss"), // Safe: Already translated back to Local by Service
+                start = a.StartDateTime.ToString("yyyy-MM-ddTHH:mm:ss"),
                 end = a.EndDateTime.ToString("yyyy-MM-ddTHH:mm:ss"),
                 extendedProps = new
                 {
@@ -104,7 +101,6 @@ public class AgendaController : Controller
         }
         catch (Exception ex)
         {
-            // Retornar un error en formato JSON para evitar que la vista se quede colgada
             return StatusCode(500, new { success = false, message = "Error interno al cargar la agenda.", detail = ex.Message });
         }
     }
@@ -112,21 +108,24 @@ public class AgendaController : Controller
     [HttpPost]
     public async Task<IActionResult> SaveAppointment([FromBody] AppointmentDto? dto)
     {
+        if (!_tenantService.TenantId.HasValue) return Json(new { success = false, message = "Tenant no identificado." });
         try
         {
             if (dto == null)
-            {
                 return Json(new { success = false, message = "Datos de cita inválidos." });
+
+            if (dto.Id != Guid.Empty)
+            {
+                var existing = await _appointmentService.GetAppointmentByIdAsync(dto.Id);
+                if (existing == null) return Json(new { success = false, message = "Cita no encontrada." });
+                if (existing.TenantId != _tenantService.TenantId.Value) return Json(new { success = false, message = "Acceso no autorizado." });
             }
 
             if (dto.Id == Guid.Empty)
-            {
                 await _appointmentService.CreateAppointmentAsync(dto);
-            }
             else
-            {
                 await _appointmentService.UpdateAppointmentAsync(dto);
-            }
+
             return Json(new { success = true });
         }
         catch (Exception ex)
@@ -138,8 +137,13 @@ public class AgendaController : Controller
     [HttpPost]
     public async Task<IActionResult> UpdateStatus(Guid id, int status)
     {
+        if (!_tenantService.TenantId.HasValue) return Json(new { success = false, message = "Tenant no identificado." });
         try
         {
+            var existing = await _appointmentService.GetAppointmentByIdAsync(id);
+            if (existing == null) return Json(new { success = false, message = "Cita no encontrada." });
+            if (existing.TenantId != _tenantService.TenantId.Value) return Json(new { success = false, message = "Acceso no autorizado." });
+
             await _appointmentService.UpdateAppointmentStatusAsync(id, status);
             return Json(new { success = true });
         }
@@ -152,8 +156,13 @@ public class AgendaController : Controller
     [HttpPost]
     public async Task<IActionResult> ConvertToOrder(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Json(new { success = false, message = "Tenant no identificado." });
         try
         {
+            var existing = await _appointmentService.GetAppointmentByIdAsync(id);
+            if (existing == null) return Json(new { success = false, message = "Cita no encontrada." });
+            if (existing.TenantId != _tenantService.TenantId.Value) return Json(new { success = false, message = "Acceso no autorizado." });
+
             var orderId = await _appointmentService.ConvertToServiceOrderAsync(id);
             return Json(new { success = true, orderId });
         }
@@ -166,8 +175,13 @@ public class AgendaController : Controller
     [HttpPost]
     public async Task<IActionResult> SendReminder(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return Json(new { success = false, message = "Tenant no identificado." });
         try
         {
+            var existing = await _appointmentService.GetAppointmentByIdAsync(id);
+            if (existing == null) return Json(new { success = false, message = "Cita no encontrada." });
+            if (existing.TenantId != _tenantService.TenantId.Value) return Json(new { success = false, message = "Acceso no autorizado." });
+
             await _appointmentService.SendWhatsappReminderAsync(id);
             return Json(new { success = true });
         }
@@ -180,6 +194,7 @@ public class AgendaController : Controller
     [HttpGet]
     public async Task<IActionResult> GetVehiculos(Guid clienteId)
     {
+        if (!_tenantService.TenantId.HasValue) return Forbid();
         var vehiculos = await _db.Vehiculos
             .AsNoTracking()
             .Where(v => v.ClienteId == clienteId)
@@ -190,22 +205,18 @@ public class AgendaController : Controller
 
     private string GetColorByMechanic(string mechanicId)
     {
-        if (string.IsNullOrEmpty(mechanicId)) return "#6c757d"; // Default Gray
-        
-        // Generate a deterministic color based on the mechanicId hash
-        var colors = new[] 
-        { 
-            "#0d6efd", // Blue
-            "#198754", // Green
-            "#dc3545", // Red
-            "#fd7e14", // Orange
-            "#6f42c1", // Purple
-            "#20c997", // Teal
-            "#d63384", // Pink
-            "#0dcaf0"  // Cyan
+        if (string.IsNullOrEmpty(mechanicId)) return "#6c757d";
+        var colors = new[]
+        {
+            "#0d6efd",
+            "#198754",
+            "#dc3545",
+            "#fd7e14",
+            "#6f42c1",
+            "#20c997",
+            "#d63384",
+            "#0dcaf0"
         };
-        
-        // Use absolute value of hash code to index into the color array
         int index = Math.Abs(mechanicId.GetHashCode()) % colors.Length;
         return colors[index];
     }

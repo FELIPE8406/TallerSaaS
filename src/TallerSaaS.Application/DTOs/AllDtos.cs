@@ -3,6 +3,7 @@ namespace TallerSaaS.Application.DTOs;
 public class ClienteDto
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public string NombreCompleto { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Telefono { get; set; }
@@ -16,6 +17,7 @@ public class ClienteDto
 public class VehiculoDto
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid ClienteId { get; set; }
     public string ClienteNombre { get; set; } = string.Empty;
     public string Marca { get; set; } = string.Empty;
@@ -31,6 +33,7 @@ public class VehiculoDto
 public class OrdenDto
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public string NumeroOrden { get; set; } = string.Empty;
     public Guid VehiculoId { get; set; }
     public string VehiculoDescripcion { get; set; } = string.Empty;
@@ -61,6 +64,7 @@ public class OrdenDto
 public class FacturaDto
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public string NumeroFactura { get; set; } = string.Empty;
     public DateTime FechaEmision { get; set; }
     public decimal Subtotal { get; set; }
@@ -68,9 +72,7 @@ public class FacturaDto
     public decimal IVA { get; set; }
     public decimal Total { get; set; }
     public string? Observaciones { get; set; }
-    /// <summary>"NoElectronica" o "Electronica"</summary>
     public string TipoFacturacion { get; set; } = "NoElectronica";
-    /// <summary>"NoAplica", "PendienteEnvio" o "Enviada"</summary>
     public string EstadoEnvio { get; set; } = "NoAplica";
     public List<OrdenDto> Ordenes { get; set; } = new();
 }
@@ -109,6 +111,7 @@ public class ItemOrdenDto
 public class InventarioDto
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string? SKU { get; set; }
     public string? Descripcion { get; set; }
@@ -122,13 +125,13 @@ public class InventarioDto
     public string NivelStockClase { get; set; } = string.Empty;
     public Guid? BodegaId { get; set; }
     public string? BodegaNombre { get; set; }
-    /// <summary>"Refaccion" o "Servicio" — mapea a TipoItemProducto enum.</summary>
     public string TipoItem { get; set; } = "Refaccion";
 }
 
 public class BodegaDto
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
     public string? Ubicacion { get; set; }
@@ -273,6 +276,7 @@ public class BalancePruebaDto
 public class AppointmentDto
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid ClienteId { get; set; }
     public string ClienteNombre { get; set; } = string.Empty;
     public Guid VehiculoId { get; set; }

@@ -69,7 +69,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasKey(p => p.Id);
             e.Property(p => p.Monto).HasColumnType("decimal(10,2)");
             e.HasIndex(p => p.TenantId).HasDatabaseName("IX_Pagos_TenantId");
-            e.HasQueryFilter(p => p.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(p => _tenantService.TenantId != null && p.TenantId == _tenantService.TenantId);
         });
 
         // ── Cliente ──────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasIndex(c => new { c.TenantId, c.FechaRegistro })
              .HasDatabaseName("IX_Clientes_Tenant_Date");
 
-            e.HasQueryFilter(c => c.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(c => _tenantService.TenantId != null && c.TenantId == _tenantService.TenantId);
         });
 
         // ── Vehiculo ─────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasIndex(v => new { v.TenantId, v.FechaRegistro })
              .HasDatabaseName("IX_Vehiculos_Tenant_Date");
 
-            e.HasQueryFilter(v => v.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(v => _tenantService.TenantId != null && v.TenantId == _tenantService.TenantId);
             e.Ignore(v => v.Descripcion);
             e.HasOne(v => v.Cliente).WithMany(c => c.Vehiculos)
              .HasForeignKey(v => v.ClienteId).OnDelete(DeleteBehavior.Restrict);
@@ -113,7 +113,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasIndex(o => new { o.TenantId, o.FechaEntrada, o.Estado })
              .HasDatabaseName("IX_Ordenes_Tenant_Date_State");
 
-            e.HasQueryFilter(o => o.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(o => _tenantService.TenantId != null && o.TenantId == _tenantService.TenantId);
             e.Ignore(o => o.EstadoTexto);
             e.Ignore(o => o.EstadoClase);
             e.HasOne(o => o.Vehiculo).WithMany(v => v.Ordenes)
@@ -149,7 +149,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasIndex(p => p.SKU)
              .HasDatabaseName("IX_Inventario_SKU");
 
-            e.HasQueryFilter(p => p.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(p => _tenantService.TenantId != null && p.TenantId == _tenantService.TenantId);
             e.Ignore(p => p.NivelStock);
             e.Ignore(p => p.NivelStockClase);
         });
@@ -164,7 +164,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(f => f.IVA).HasColumnType("decimal(12,2)");
             e.Property(f => f.Total).HasColumnType("decimal(12,2)");
             e.HasIndex(f => f.TenantId).HasDatabaseName("IX_Facturas_TenantId");
-            e.HasQueryFilter(f => f.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(f => _tenantService.TenantId != null && f.TenantId == _tenantService.TenantId);
             // Ordenes reference their Factura via FacturaId (optional FK on Orden)
             e.HasMany(f => f.Ordenes).WithOne(o => o.Factura)
              .HasForeignKey(o => o.FacturaId).OnDelete(DeleteBehavior.SetNull);
@@ -176,7 +176,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasKey(b => b.Id);
             e.Property(b => b.Nombre).HasMaxLength(200).IsRequired();
             e.HasIndex(b => b.TenantId).HasDatabaseName("IX_Bodegas_TenantId");
-            e.HasQueryFilter(b => b.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(b => _tenantService.TenantId != null && b.TenantId == _tenantService.TenantId);
         });
 
         // ── MovimientoInventario ───────────────────────────────────────
@@ -186,7 +186,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(m => m.Tipo).HasMaxLength(30).IsRequired();
             e.HasIndex(m => m.TenantId).HasDatabaseName("IX_Movimientos_TenantId");
             e.HasIndex(m => m.ProductoId).HasDatabaseName("IX_Movimientos_ProductoId");
-            e.HasQueryFilter(m => m.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(m => _tenantService.TenantId != null && m.TenantId == _tenantService.TenantId);
             e.HasOne(m => m.Producto).WithMany()
              .HasForeignKey(m => m.ProductoId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(m => m.BodegaOrigen).WithMany()
@@ -209,7 +209,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(c => c.Codigo).HasMaxLength(20).IsRequired();
             e.Property(c => c.Nombre).HasMaxLength(200).IsRequired();
             e.HasIndex(c => new { c.TenantId, c.Codigo }).IsUnique();
-            e.HasQueryFilter(c => c.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(c => _tenantService.TenantId != null && c.TenantId == _tenantService.TenantId);
         });
 
         // ── Accounting: AsientoContable ───────────────────────────────────────────────
@@ -218,7 +218,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasKey(a => a.Id);
             e.Property(a => a.Referencia).HasMaxLength(50);
             e.HasIndex(a => a.TenantId);
-            e.HasQueryFilter(a => a.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(a => _tenantService.TenantId != null && a.TenantId == _tenantService.TenantId);
             e.HasMany(a => a.Lineas).WithOne(l => l.AsientoContable)
              .HasForeignKey(l => l.AsientoContableId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -243,7 +243,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasIndex(a => new { a.TenantId, a.MechanicId, a.StartDateTime, a.EndDateTime })
              .HasDatabaseName("IX_Appointments_Tenant_Mechanic_Dates")
              .IncludeProperties(a => new { a.Status });
-            e.HasQueryFilter(a => a.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(a => _tenantService.TenantId != null && a.TenantId == _tenantService.TenantId);
             e.HasOne(a => a.Cliente).WithMany()
              .HasForeignKey(a => a.ClienteId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(a => a.Vehiculo).WithMany()
@@ -255,7 +255,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         {
             e.HasKey(m => m.Id);
             e.HasIndex(m => new { m.TenantId, m.MechanicId, m.DayOfWeek }).HasDatabaseName("IX_MechanicAvailabilities_Mechanic_Day_Active");
-            e.HasQueryFilter(m => m.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(m => _tenantService.TenantId != null && m.TenantId == _tenantService.TenantId);
         });
 
         // ── EventoTrazabilidad ────────────────────────────────────────────────────────
@@ -265,7 +265,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(ev => ev.Descripcion).HasMaxLength(500).IsRequired();
             e.HasIndex(ev => ev.TenantId).HasDatabaseName("IX_EventosTrazabilidad_TenantId");
             e.HasIndex(ev => ev.VehiculoId).HasDatabaseName("IX_EventosTrazabilidad_VehiculoId");
-            e.HasQueryFilter(ev => ev.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(ev => _tenantService.TenantId != null && ev.TenantId == _tenantService.TenantId);
             e.Ignore(ev => ev.TipoIcono);
             e.Ignore(ev => ev.TipoClase);
             e.HasOne(ev => ev.Vehiculo).WithMany()
@@ -285,7 +285,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.HasIndex(n => new { n.TenantId, n.Periodo, n.Estado, n.UserId })
              .HasDatabaseName("IX_NominaRegistros_Tenant_Period_Status_User");
              
-            e.HasQueryFilter(n => n.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(n => _tenantService.TenantId != null && n.TenantId == _tenantService.TenantId);
         });
 
         // ── Payroll: EmpleadoContrato ─────────────────────────────────────────────
@@ -295,7 +295,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(c => c.SalarioBase).HasColumnType("decimal(12,2)");
             e.Property(c => c.PorcentajeComision).HasColumnType("decimal(5,2)");
             e.HasIndex(c => c.TenantId);
-            e.HasQueryFilter(c => c.TenantId == _tenantService.TenantId || _tenantService.TenantId == null);
+            e.HasQueryFilter(c => _tenantService.TenantId != null && c.TenantId == _tenantService.TenantId);
             e.HasOne<ApplicationUser>().WithOne(u => u.EmpleadoContrato)
              .HasForeignKey<EmpleadoContrato>(c => c.UserId).OnDelete(DeleteBehavior.Cascade);
         });

@@ -193,6 +193,7 @@ public class FacturaService
     private static FacturaDto MapToDto(Factura f) => new()
     {
         Id                 = f.Id,
+        TenantId           = f.TenantId,
         NumeroFactura      = f.NumeroFactura,
         FechaEmision       = f.FechaEmision,
         Subtotal           = f.Subtotal,
@@ -205,6 +206,7 @@ public class FacturaService
         Ordenes            = f.Ordenes.Select(o => new OrdenDto
         {
             Id                   = o.Id,
+            TenantId             = o.TenantId,
             NumeroOrden          = o.NumeroOrden,
             VehiculoId           = o.VehiculoId,
             VehiculoDescripcion  = o.Vehiculo != null ? o.Vehiculo.Descripcion : "",

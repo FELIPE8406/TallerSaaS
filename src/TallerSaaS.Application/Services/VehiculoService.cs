@@ -3,18 +3,26 @@ using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Extensions;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services;
 
 public class VehiculoService
 {
     private readonly IApplicationDbContext _db;
-    public VehiculoService(IApplicationDbContext db) => _db = db;
+    private readonly ICurrentTenantService _tenantService;
+
+    public VehiculoService(IApplicationDbContext db, ICurrentTenantService tenantService)
+    {
+        _db = db;
+        _tenantService = tenantService;
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     private static VehiculoDto Map(Vehiculo v) => new()
     {
         Id          = v.Id,
+        TenantId    = v.TenantId,
         ClienteId   = v.ClienteId,
         ClienteNombre = v.Cliente?.NombreCompleto ?? string.Empty,
         Marca       = v.Marca,
@@ -37,6 +45,7 @@ public class VehiculoService
             .Select(v => new VehiculoDto
             {
                 Id          = v.Id,
+                TenantId    = v.TenantId,
                 ClienteId   = v.ClienteId,
                 ClienteNombre = v.Cliente != null ? v.Cliente.NombreCompleto : string.Empty,
                 Marca       = v.Marca,
@@ -140,7 +149,9 @@ public class VehiculoService
 
     public async Task UpdateAsync(VehiculoDto dto)
     {
-        var v = await _db.Vehiculos.FindAsync(dto.Id)
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
+        var v = await _db.Vehiculos
+                .FirstOrDefaultAsync(x => x.Id == dto.Id && x.TenantId == _tenantService.TenantId.Value)
                 ?? throw new Exception("Vehículo no encontrado");
         v.Marca      = dto.Marca;
         v.Modelo     = dto.Modelo;
@@ -154,8 +165,9 @@ public class VehiculoService
 
     public async Task DeleteAsync(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
         var v = await _db.Vehiculos.Include(x => x.Ordenes)
-                    .FirstOrDefaultAsync(x => x.Id == id)
+                    .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == _tenantService.TenantId.Value)
                 ?? throw new Exception("Vehículo no encontrado");
         if (v.Ordenes.Any())
             throw new InvalidOperationException("No se puede eliminar: tiene órdenes asociadas.");

@@ -17,26 +17,23 @@ public class EmpleadoContratoController : Controller
     private readonly TallerSaaS.Infrastructure.Data.ApplicationDbContext _db;
 
     public EmpleadoContratoController(
-        IEmpleadoContratoService contratoService, 
-        IUserProvider userProvider, 
+        IEmpleadoContratoService contratoService,
+        IUserProvider userProvider,
         ICurrentTenantService tenantService,
         TallerSaaS.Infrastructure.Data.ApplicationDbContext db)
     {
         _contratoService = contratoService;
-        _userProvider = userProvider;
-        _tenantService = tenantService;
-        _db = db;
+        _userProvider    = userProvider;
+        _tenantService   = tenantService;
+        _db              = db;
     }
 
     public async Task<IActionResult> Index()
     {
         var tenantId = _tenantService.TenantId;
-        if (tenantId == null) return RedirectToAction("Upgrade", "Nomina");
+        if (!tenantId.HasValue) return Forbid();
 
         var staffList = await _userProvider.GetStaffAsync(tenantId.Value);
-        // We'll keep the Index action simple as the table will be loaded via AJAX.
-        // But we still need these for the limits and the New Employee modal.
-        
         var unconfiguredUsers = new List<object>();
         int activeEmployeesCount = 0;
 
@@ -44,22 +41,18 @@ public class EmpleadoContratoController : Controller
         {
             var contrato = await _contratoService.GetByUserIdAsync(staff.Id);
             if (contrato != null && contrato.Activo) activeEmployeesCount++;
-
             if (contrato == null)
-            {
                 unconfiguredUsers.Add(new { staff.Id, staff.Name });
-            }
         }
 
-        // Plan Limit Logic Check
-        var tenant = await _db.Tenants.FindAsync(tenantId.Value);
-        var plan = tenant != null ? await _db.PlanesSuscripcion.FindAsync(tenant.PlanSuscripcionId) : null;
+        var tenant  = await _db.Tenants.FindAsync(tenantId.Value);
+        var plan    = tenant != null ? await _db.PlanesSuscripcion.FindAsync(tenant.PlanSuscripcionId) : null;
         int planLimit = plan?.LimiteUsuarios ?? 9999;
 
         ViewBag.UnconfiguredUsers = unconfiguredUsers;
-        ViewBag.LimiteAlcanzado = activeEmployeesCount >= planLimit;
-        ViewBag.ActiveCount = activeEmployeesCount;
-        ViewBag.PlanLimit = planLimit;
+        ViewBag.LimiteAlcanzado   = activeEmployeesCount >= planLimit;
+        ViewBag.ActiveCount       = activeEmployeesCount;
+        ViewBag.PlanLimit         = planLimit;
 
         return View();
     }
@@ -68,37 +61,46 @@ public class EmpleadoContratoController : Controller
     public async Task<IActionResult> GetList()
     {
         var tenantId = _tenantService.TenantId;
-        if (tenantId == null) return Unauthorized();
+        if (!tenantId.HasValue) return Forbid();
 
         var staffList = await _userProvider.GetStaffAsync(tenantId.Value);
-        var result = new List<object>();
+        var result    = new List<object>();
 
         foreach (var staff in staffList)
         {
             var contrato = await _db.EmpleadoContratos.AsNoTracking()
-                .FirstOrDefaultAsync(c => c.UserId == staff.Id && c.TenantId == tenantId);
+                .FirstOrDefaultAsync(c => c.UserId == staff.Id && c.TenantId == tenantId.Value);
 
             result.Add(new {
                 staff.Id,
                 staff.Name,
                 staff.Role,
-                TieneContrato = contrato != null,
+                TieneContrato  = contrato != null,
                 ContratoActivo = contrato?.Activo ?? false,
-                SalarioBase = contrato?.SalarioBase ?? 0,
-                Comision = contrato?.PorcentajeComision ?? 0,
-                TipoEmpleado = contrato?.TipoEmpleado ?? "",
-                StatusTexto = (contrato == null) ? "Sin Contrato" : (contrato.Activo ? "Activo" : "Inactivo")
+                SalarioBase    = contrato?.SalarioBase ?? 0,
+                Comision       = contrato?.PorcentajeComision ?? 0,
+                TipoEmpleado   = contrato?.TipoEmpleado ?? "",
+                StatusTexto    = (contrato == null) ? "Sin Contrato" : (contrato.Activo ? "Activo" : "Inactivo")
             });
         }
         return Json(result);
     }
 
+    // ATTACK FIX: userId accepted from client — validate it belongs to current tenant
     [HttpGet]
     public async Task<IActionResult> GetContrato(string userId)
     {
+        var tenantId = _tenantService.TenantId;
+        if (!tenantId.HasValue) return Forbid();
+        if (string.IsNullOrWhiteSpace(userId)) return BadRequest();
+
+        // Ensure the requested user belongs to this tenant
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId.Value);
+        if (user == null) return Forbid();
+
         var contrato = await _contratoService.GetByUserIdAsync(userId);
         if (contrato == null) return Json(null);
-        
+
         return Json(new {
             contrato.SalarioBase,
             contrato.PorcentajeComision,
@@ -108,18 +110,30 @@ public class EmpleadoContratoController : Controller
         });
     }
 
-    [HttpPost]
-    public async Task<IActionResult> GuardarContrato(string userId, decimal salarioBase, decimal comision, bool activo, string tipoEmpleado, string urlPdf)
+    // ATTACK FIX: userId from client; validate tenant ownership before saving
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> GuardarContrato(
+        string userId, decimal salarioBase, decimal comision,
+        bool activo, string tipoEmpleado, string urlPdf)
     {
-        if (string.IsNullOrEmpty(userId)) return Json(new { success = false, message = "ID de usuario inválido." });
+        if (string.IsNullOrWhiteSpace(userId))
+            return Json(new { success = false, message = "ID de usuario inválido." });
+
+        var tenantId = _tenantService.TenantId;
+        if (!tenantId.HasValue)
+            return Json(new { success = false, message = "Tenant no identificado." });
+
+        // CRITICAL: verify userId belongs to current tenant before mutation
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenantId.Value);
+        if (user == null)
+            return Json(new { success = false, message = "Acceso no autorizado." });
 
         try
         {
             var success = await _contratoService.SaveContratoAsync(userId, salarioBase, comision, activo, tipoEmpleado, urlPdf);
-            if (success)
-                return Json(new { success = true, message = "Contrato guardado exitosamente." });
-            
-            return Json(new { success = false, message = "No se pudo guardar el contrato." });
+            return success
+                ? Json(new { success = true, message = "Contrato guardado exitosamente." })
+                : Json(new { success = false, message = "No se pudo guardar el contrato." });
         }
         catch (Exception ex)
         {

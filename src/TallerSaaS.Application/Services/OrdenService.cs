@@ -4,6 +4,7 @@ using TallerSaaS.Application.Extensions;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
 using TallerSaaS.Domain.Enums;
+using TallerSaaS.Domain.Interfaces;
 
 namespace TallerSaaS.Application.Services;
 
@@ -11,16 +12,18 @@ public class OrdenService
 {
     private readonly IApplicationDbContext _db;
     private readonly TrazabilidadService _trazabilidad;
+    private readonly ICurrentTenantService _tenantService;
 
-    public OrdenService(IApplicationDbContext db, TrazabilidadService trazabilidad)
+    public OrdenService(IApplicationDbContext db, TrazabilidadService trazabilidad, ICurrentTenantService tenantService)
     {
         _db = db;
         _trazabilidad = trazabilidad;
+        _tenantService = tenantService;
     }
 
     private static OrdenDto MapToDto(Orden o) => new()
     {
-        Id = o.Id, NumeroOrden = o.NumeroOrden,
+        Id = o.Id, TenantId = o.TenantId, NumeroOrden = o.NumeroOrden,
         VehiculoId = o.VehiculoId,
         VehiculoDescripcion = o.Vehiculo != null ? $"{o.Vehiculo.Anio} {o.Vehiculo.Marca} {o.Vehiculo.Modelo}" : "",
         ClienteNombre = o.Vehiculo?.Cliente?.NombreCompleto ?? "",
@@ -82,12 +85,12 @@ public class OrdenService
 
     public async Task<OrdenDto?> GetByIdAsync(Guid id)
     {
+        if (!_tenantService.TenantId.HasValue) return null;
         var orden = await _db.Ordenes
-            .IgnoreQueryFilters()   // bypass TenantId filter — auth already validated by controller
             .AsNoTracking()
             .Include(o => o.Vehiculo).ThenInclude(v => v!.Cliente)
             .Include(o => o.Items).ThenInclude(i => i.ProductoInventario)
-            .FirstOrDefaultAsync(o => o.Id == id);
+            .FirstOrDefaultAsync(o => o.Id == id && o.TenantId == _tenantService.TenantId.Value);
         return orden == null ? null : MapToDto(orden);
     }
 
@@ -119,17 +122,16 @@ public class OrdenService
 
     public async Task CambiarEstadoAsync(Guid id, EstadoOrden nuevoEstado)
     {
-        var orden = await _db.Ordenes.FindAsync(id) ?? throw new Exception("Orden no encontrada");
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
+        var orden = await _db.Ordenes
+            .FirstOrDefaultAsync(o => o.Id == id && o.TenantId == _tenantService.TenantId.Value)
+            ?? throw new Exception("Orden no encontrada");
 
-        // ── Validación de negocio: "Entregado" requiere factura pagada ──────────
-        // Si el nuevo estado es Entregado (o se intenta pasar a ese estado),
-        // la orden DEBE estar pagada y tener una factura asociada.
         if (nuevoEstado == EstadoOrden.Entregado)
         {
             if (!orden.Pagada || !orden.FacturaId.HasValue)
                 throw new InvalidOperationException("REQUIERE_FACTURA");
 
-            // Regla de precedencia: si ya está facturada → estado compuesto.
             if (orden.Bloqueada)
                 nuevoEstado = EstadoOrden.EntregadoYFacturado;
         }
@@ -144,11 +146,10 @@ public class OrdenService
 
     public async Task AddItemAsync(Guid ordenId, ItemOrdenDto dto)
     {
-        // ── Phase 0: validate order exists and is not locked ─────────────────
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
         var ordenCheck = await _db.Ordenes
-            .IgnoreQueryFilters()
             .AsNoTracking()
-            .FirstOrDefaultAsync(o => o.Id == ordenId)
+            .FirstOrDefaultAsync(o => o.Id == ordenId && o.TenantId == _tenantService.TenantId.Value)
             ?? throw new Exception($"Orden {ordenId} no encontrada.");
 
         if (ordenCheck.Bloqueada)
@@ -227,12 +228,9 @@ public class OrdenService
         _db.ItemsOrden.Add(item);
         await _db.SaveChangesAsync();
 
-        // ── Phase 2: reload Orden fresh, recalculate totals, save ─────────────────
-        // Load with tracking (no AsNoTracking) so EF can UPDATE scalar columns.
         var orden = await _db.Ordenes
-            .IgnoreQueryFilters()
             .Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.Id == ordenId)
+            .FirstOrDefaultAsync(o => o.Id == ordenId && o.TenantId == _tenantService.TenantId!.Value)
             ?? throw new Exception("Orden no encontrada al recalcular totales.");
 
         RecalcularTotales(orden);   // Subtotal, IVA 19% Colombia, Total
@@ -250,9 +248,10 @@ public class OrdenService
 
     public async Task RemoveItemAsync(Guid ordenId, Guid itemId)
     {
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
         var orden = await _db.Ordenes
             .Include(o => o.Items).ThenInclude(i => i.ProductoInventario)
-            .FirstOrDefaultAsync(o => o.Id == ordenId)
+            .FirstOrDefaultAsync(o => o.Id == ordenId && o.TenantId == _tenantService.TenantId.Value)
             ?? throw new Exception("Orden no encontrada");
 
         if (orden.Bloqueada)
@@ -328,9 +327,10 @@ public class OrdenService
 
     public async Task UpdateRetentionAsync(Guid ordenId, bool aplicar, decimal porcentaje)
     {
+        if (!_tenantService.TenantId.HasValue) throw new UnauthorizedAccessException("Tenant no identificado.");
         var orden = await _db.Ordenes
             .Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.Id == ordenId)
+            .FirstOrDefaultAsync(o => o.Id == ordenId && o.TenantId == _tenantService.TenantId.Value)
             ?? throw new Exception("Orden no encontrada");
 
         if (orden.Bloqueada)
