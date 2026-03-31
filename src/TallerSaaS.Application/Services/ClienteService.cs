@@ -42,6 +42,40 @@ public class ClienteService
     }
 
     /// <summary>
+    /// Búsqueda optimizada para autocompletar (endpoint JSON).
+    /// Evita devolver miles de clientes al navegador.
+    /// </summary>
+    public async Task<List<ClienteDto>> BuscarTopAsync(string? buscar, int take = 20)
+    {
+        var query = _db.Clientes.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrEmpty(buscar))
+        {
+            buscar = buscar.Trim().ToLower();
+            query = query.Where(c => c.NombreCompleto.ToLower().Contains(buscar) ||
+                                     (c.Cedula != null && c.Cedula.Contains(buscar)) ||
+                                     (c.Telefono != null && c.Telefono.Contains(buscar)));
+        }
+
+        return await query
+            .Select(c => new ClienteDto
+            {
+                Id = c.Id,
+                TenantId = c.TenantId,
+                NombreCompleto = c.NombreCompleto,
+                Email = c.Email,
+                Telefono = c.Telefono,
+                Direccion = c.Direccion,
+                Cedula = c.Cedula,
+                FechaRegistro = c.FechaRegistro,
+                Activo = c.Activo,
+                TotalVehiculos = c.Vehiculos.Count
+            })
+            .OrderBy(c => c.NombreCompleto)
+            .Take(take)
+            .ToListAsync();
+    }
+
+    /// <summary>
     /// Returns the top N active clients ordered by name.
     /// Pushes Take(count) to SQL — ideal for dropdown population
     /// without fetching the entire table into memory.

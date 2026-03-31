@@ -37,6 +37,11 @@ public static class TipoMovimiento
 {
     public const string Entrada       = "Entrada";
     public const string Salida        = "Salida";
+    /// <summary>
+    /// Movimiento contable de consumo al momento de facturar.
+    /// No necesariamente implica un cambio adicional de stock (ej: si el stock ya fue descontado preventivamente).
+    /// </summary>
+    public const string Consumo       = "Consumo";
     public const string Traslado      = "Traslado";
     public const string AjusteEntrada = "AjusteEntrada";
     public const string AjusteSalida  = "AjusteSalida";

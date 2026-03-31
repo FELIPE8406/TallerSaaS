@@ -127,13 +127,18 @@ public class OrdenService
             .FirstOrDefaultAsync(o => o.Id == id && o.TenantId == _tenantService.TenantId.Value)
             ?? throw new Exception("Orden no encontrada");
 
+        // Protección de datos: una orden bloqueada (facturada) no puede mutar vía workflow.
+        if (orden.Bloqueada)
+            throw new InvalidOperationException("ORDEN_YA_BLOQUEADA");
+
+        if (!EsTransicionValida(orden.Estado, nuevoEstado))
+            throw new InvalidOperationException($"TRANSICION_INVALIDA: {orden.Estado} -> {nuevoEstado}");
+
+        // Entregado requiere que la orden esté pagada y vinculada a una factura.
         if (nuevoEstado == EstadoOrden.Entregado)
         {
             if (!orden.Pagada || !orden.FacturaId.HasValue)
                 throw new InvalidOperationException("REQUIERE_FACTURA");
-
-            if (orden.Bloqueada)
-                nuevoEstado = EstadoOrden.EntregadoYFacturado;
         }
 
         orden.Estado = nuevoEstado;
@@ -142,6 +147,19 @@ public class OrdenService
             orden.FechaSalida = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+    }
+
+    private static bool EsTransicionValida(EstadoOrden actual, EstadoOrden nuevo)
+    {
+        return actual switch
+        {
+            EstadoOrden.Recibido            => nuevo == EstadoOrden.EnReparacion,
+            EstadoOrden.EnReparacion        => nuevo == EstadoOrden.Terminado,
+            EstadoOrden.Terminado          => nuevo == EstadoOrden.Entregado,
+            EstadoOrden.Entregado          => nuevo == EstadoOrden.EntregadoYFacturado,
+            EstadoOrden.Facturada          => nuevo == EstadoOrden.EntregadoYFacturado,
+            _                               => false
+        };
     }
 
     public async Task AddItemAsync(Guid ordenId, ItemOrdenDto dto)

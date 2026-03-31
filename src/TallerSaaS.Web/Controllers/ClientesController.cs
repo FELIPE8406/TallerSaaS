@@ -36,7 +36,7 @@ public class ClientesController : Controller
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
             return Json(new List<object>());
 
-        var clientes = await _clienteService.GetAllAsync(q);
+        var clientes = await _clienteService.BuscarTopAsync(q, take: 20);
         return Json(clientes.Select(c => new {
             id = c.Id,
             text = $"{c.NombreCompleto} {(c.Cedula != null ? "— " + c.Cedula : "")}"

@@ -76,11 +76,11 @@
           }
           else
           {
-            <form asp-action="CambiarEstado" method="post" style="display:inline;">
+            <form asp-action="CambiarEstado" method="post" style="display:inline;" class="ag-cambiar-estado-form">
               @Html.AntiForgeryToken()
               <input type="hidden" name="id"     value="@Model.Id" />
               <input type="hidden" name="estado" value="@(estadoActual + 1)" />
-              <button type="submit" class="btn btn-primary">
+              <button type="submit" class="btn btn-primary ag-cambiar-estado-btn">
                 <i class="bi bi-arrow-right-circle me-1"></i>Avanzar a "@nextLabel"
               </button>
             </form>
@@ -277,6 +277,7 @@
     'use strict';
     console.log("Initializing Order Detail Module (Autocomplete)...");
     const ordenId     = '@Model.Id';
+    const isBloqueada = @Model.Bloqueada.ToString().ToLowerInvariant();
     const antiForgery = () => document.querySelector('#formAgregarItem [name="__RequestVerificationToken"]')?.value ?? '';
 
     // ── DOM refs ──────────────────────────────────────────────────────────────
@@ -303,6 +304,17 @@
         msg.style.display = 'inline';
         setTimeout(() => msg.style.display = 'none', 2500);
     }
+
+    const escapeHtml = (s) => {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/[&<>"']/g, (m) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[m]));
+    };
 
     function showError(msg) {
         errorDiv.textContent    = msg;
@@ -333,7 +345,7 @@
             ? '<span class="badge bg-primary">Servicio</span>'
             : '<span class="badge bg-info text-dark">Refacción</span>';
         return `<tr data-id="${item.id}">
-            <td>${item.descripcion}</td>
+            <td>${escapeHtml(item.descripcion)}</td>
             <td>${badge}</td>
             <td>${item.cantidad}</td>
             <td>${fmt(item.precioUnitario)}</td>
@@ -455,9 +467,11 @@
 
             const tipoBadge = p.tipoItem === 'Servicio'
                 ? '<span class="badge bg-primary ms-1" style="font-size:10px;">Servicio</span>'
-                : `<span class="badge bg-info text-dark ms-1" style="font-size:10px;">Refacción · Stock: ${p.stock}</span>`;
+                : `<span class="badge bg-info text-dark ms-1" style="font-size:10px;">Refacción · Stock: ${Number(p.stock ?? 0)}</span>`;
 
-            li.innerHTML = `<span style="font-weight:600;">${p.nombre}</span>${p.sku ? ' <small style="color:var(--text-muted);">' + p.sku + '</small>' : ''}${tipoBadge}`
+            const nombreEsc = escapeHtml(p.nombre);
+            const skuEsc = escapeHtml(p.sku);
+            li.innerHTML = `<span style="font-weight:600;">${nombreEsc}</span>${p.sku ? ' <small style="color:var(--text-muted);">' + skuEsc + '</small>' : ''}${tipoBadge}`
                          + `<span style="float:right;font-weight:700;color:var(--primary);">${fmt(p.precioVenta)}</span>`;
 
             li.addEventListener('mousedown', (e) => { e.preventDefault(); seleccionarProducto(p); });
@@ -553,6 +567,24 @@
             btn.disabled  = false;
             btn.innerHTML = '<i class="bi bi-plus-lg"></i>';
         }
+    });
+
+    // ── UX de seguridad: evitar múltiples CambiarEstado concurrentes ─────────
+    let isEstadoSubmitting = false;
+    document.querySelectorAll('form.ag-cambiar-estado-form').forEach(formEl => {
+        formEl.addEventListener('submit', (ev) => {
+            if (isBloqueada) { ev.preventDefault(); return; }
+            if (isEstadoSubmitting) { ev.preventDefault(); return; }
+            isEstadoSubmitting = true;
+
+            const btn = formEl.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                const original = btn.innerHTML;
+                btn.dataset.originalHtml = original;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando...';
+            }
+        });
     });
 
     // ── Withholding Persistence Logic ────────────────────────────────────────

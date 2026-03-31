@@ -190,6 +190,40 @@ public class InventarioService
             .Where(i => i.ProductoInventarioId.HasValue)
             .ToList();
 
+        if (itemsConProducto.Count == 0) return;
+
+        // ── Blindaje / idempotencia ──────────────────────────────────────────
+        // Si la orden ya está bloqueada (facturada), no se debe volver a consumir.
+        if (orden.Bloqueada)
+            throw new InvalidOperationException("ORDEN_YA_BLOQUEADA");
+
+        // Si el consumo ya fue registrado (ej: doble click / doble request),
+        // abortar para evitar doble descuento y doble rastro.
+        var consumoObservacionesPrefix = $"Consumo en orden #{orden.NumeroOrden}";
+        var consumoYaExiste = await _db.MovimientosInventario.AnyAsync(m =>
+            m.TenantId == orden.TenantId &&
+            m.Referencia == orden.NumeroOrden &&
+            ((m.Tipo == TipoMovimiento.Consumo) ||
+             (m.Observaciones != null && m.Observaciones.StartsWith(consumoObservacionesPrefix))));
+
+        if (consumoYaExiste)
+            throw new InvalidOperationException("CONSUMO_YA_REGISTRADO");
+
+        // Si el stock ya fue descontado preventivamente al agregar ítems,
+        // no debemos decrementar stock nuevamente; solo registramos el consumo (audit).
+        var preventivoObservacionesPrefix = "Salida preventiva al agregar ítem a orden #";
+        var productosIds = itemsConProducto.Select(i => i.ProductoInventarioId!.Value).Distinct().ToList();
+        var productosConPreventivo = await _db.MovimientosInventario
+            .Where(m =>
+                m.TenantId == orden.TenantId &&
+                m.Referencia == orden.NumeroOrden &&
+                m.Observaciones != null &&
+                m.Observaciones.StartsWith(preventivoObservacionesPrefix) &&
+                productosIds.Contains(m.ProductoId))
+            .Select(m => m.ProductoId)
+            .Distinct()
+            .ToListAsync();
+
         foreach (var item in itemsConProducto)
         {
             var producto = await _db.Inventario
@@ -197,16 +231,21 @@ public class InventarioService
             if (producto == null) continue;
 
             var cantidadDescontar = (int)Math.Ceiling(item.Cantidad);
-            producto.Stock = Math.Max(0, producto.Stock - cantidadDescontar);
-            producto.FechaActualizacion = DateTime.UtcNow;
+
+            // Solo decrementar stock si ese producto NO fue descontado preventivamente al agregar ítems.
+            if (!productosConPreventivo.Contains(item.ProductoInventarioId!.Value))
+            {
+                producto.Stock = Math.Max(0, producto.Stock - cantidadDescontar);
+                producto.FechaActualizacion = DateTime.UtcNow;
+            }
 
             _db.MovimientosInventario.Add(new MovimientoInventario
             {
-                TenantId   = orden.TenantId,
-                ProductoId = producto.Id,
-                Tipo       = TipoMovimiento.Salida,
-                Cantidad   = cantidadDescontar,
-                Referencia = orden.NumeroOrden,
+                TenantId      = orden.TenantId,
+                ProductoId    = producto.Id,
+                Tipo          = TipoMovimiento.Consumo,
+                Cantidad      = cantidadDescontar,
+                Referencia    = orden.NumeroOrden,
                 Observaciones = $"Consumo en orden #{orden.NumeroOrden} al facturar"
             });
         }

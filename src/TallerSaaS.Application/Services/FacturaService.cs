@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using TallerSaaS.Application.DTOs;
 using TallerSaaS.Application.Extensions;
 using TallerSaaS.Application.Interfaces;
@@ -41,92 +42,104 @@ public class FacturaService
         if (!ordenIds.Any())
             throw new InvalidOperationException("Debe seleccionar al menos una orden para facturar.");
 
-        // 1. Cargar todas las órdenes con sus ítems
-        var ordenes = await _db.Ordenes
-            .Include(o => o.Items).ThenInclude(i => i.ProductoInventario)
-            .Include(o => o.Vehiculo)
-            .Where(o => ordenIds.Contains(o.Id) && o.TenantId == tenantId)
-            .ToListAsync();
-
-        if (ordenes.Count != ordenIds.Count)
-            throw new InvalidOperationException("Una o más órdenes no fueron encontradas para este tenant.");
-
-        // 2. Validar que ninguna esté ya bloqueada/facturada
-        var bloqueadas = ordenes.Where(o => o.Bloqueada).Select(o => o.NumeroOrden).ToList();
-        if (bloqueadas.Any())
-            throw new InvalidOperationException(
-                $"Las siguientes órdenes ya están facturadas: {string.Join(", ", bloqueadas)}");
-
-        // 3. Generar número de factura consecutivo: A-YYYY-NNNN
-        var anio  = DateTime.UtcNow.Year;
-        var count = await _db.Facturas.CountAsync(f => f.TenantId == tenantId) + 1;
-        var numeroFactura = $"A-{anio}-{count:D4}";
-
-        // 4. Crear la Factura con tipo y estado de envío
-        var factura = new Factura
+        // Blindaje transaccional + aislamiento para evitar doble facturación concurrente.
+        // Serializable reduce inconsistencias por lecturas concurrentes (especialmente al marcar Bloqueada).
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable);
+        try
         {
-            TenantId        = tenantId,
-            NumeroFactura   = numeroFactura,
-            FechaEmision    = DateTime.UtcNow,
-            Observaciones   = null,
-            TipoFacturacion = tipoFacturacion,
-            EstadoEnvio     = tipoFacturacion == TipoFacturacion.Electronica
-                              ? EstadoEnvioFactura.PendienteEnvio
-                              : EstadoEnvioFactura.NoAplica
-        };
+            // 1. Cargar todas las órdenes con sus ítems
+            var ordenes = await _db.Ordenes
+                .Include(o => o.Items).ThenInclude(i => i.ProductoInventario)
+                .Include(o => o.Vehiculo)
+                .Where(o => ordenIds.Contains(o.Id) && o.TenantId == tenantId)
+                .ToListAsync();
 
-        // 5. Calcular totales consolidados y vincular órdenes
-        foreach (var orden in ordenes)
-        {
-            factura.Subtotal  += orden.Subtotal;
-            factura.Descuento += orden.Descuento;
-            factura.Ordenes.Add(orden);
+            if (ordenes.Count != ordenIds.Count)
+                throw new InvalidOperationException("Una o más órdenes no fueron encontradas para este tenant.");
 
-            // 6. Bloquear la orden y cerrar el ciclo de cobro (ambos tipos de factura)
-            orden.Bloqueada    = true;
-            orden.Pagada       = true;                   // cierra el saldo en ambos flujos
-            orden.FechaSalida  = DateTime.UtcNow;
-            orden.Estado       = EstadoOrden.EntregadoYFacturado;
+            // 2. Validar que ninguna esté ya bloqueada/facturada
+            var bloqueadas = ordenes.Where(o => o.Bloqueada).Select(o => o.NumeroOrden).ToList();
+            if (bloqueadas.Any())
+                throw new InvalidOperationException(
+                    $"Las siguientes órdenes ya están facturadas: {string.Join(", ", bloqueadas)}");
 
-            // 7. Descontar Stock DEFINITIVO (Salida de inventario)
-            await _inventario.DescontarStockPorOrdenAsync(orden);
+            // 3. Generar número de factura consecutivo: A-YYYY-NNNN
+            var anio  = DateTime.UtcNow.Year;
+            var count = await _db.Facturas.CountAsync(f => f.TenantId == tenantId) + 1;
+            var numeroFactura = $"A-{anio}-{count:D4}";
 
-            // 8. Contabilidad: Costo de Ventas (Evento 2)
-            await _accounting.RegistrarSalidaInventarioAsync(orden);
+            // 4. Crear la Factura con tipo y estado de envío
+            var factura = new Factura
+            {
+                TenantId        = tenantId,
+                NumeroFactura   = numeroFactura,
+                FechaEmision    = DateTime.UtcNow,
+                Observaciones   = null,
+                TipoFacturacion = tipoFacturacion,
+                EstadoEnvio     = tipoFacturacion == TipoFacturacion.Electronica
+                                  ? EstadoEnvioFactura.PendienteEnvio
+                                  : EstadoEnvioFactura.NoAplica
+            };
 
-            // 9. Trazabilidad
-            await _trazabilidad.RegistrarEventoAsync(
-                vehiculoId:   orden.VehiculoId,
-                tipo:         TipoEvento.FacturaGenerada,
-                descripcion:  $"Factura #{numeroFactura} generada para Orden #{orden.NumeroOrden}" +
-                              (tipoFacturacion == TipoFacturacion.Electronica
-                               ? " [Electrónica – Pendiente DIAN]" : ""),
-                referenciaId: factura.Id,
-                tenantId:     tenantId);
+            // 5. Calcular totales consolidados y vincular órdenes
+            foreach (var orden in ordenes)
+            {
+                factura.Subtotal  += orden.Subtotal;
+                factura.Descuento += orden.Descuento;
+                factura.Ordenes.Add(orden);
+
+                // 6. Descontar (idempotente) antes de bloquear la orden
+                await _inventario.DescontarStockPorOrdenAsync(orden);
+
+                // 7. Bloquear la orden y cerrar el ciclo de cobro (ambos tipos de factura)
+                orden.Bloqueada    = true;
+                orden.Pagada       = true;                   // cierra el saldo en ambos flujos
+                orden.FechaSalida  = DateTime.UtcNow;
+                orden.Estado       = EstadoOrden.EntregadoYFacturado;
+
+                // 8. Contabilidad: Costo de Ventas (Evento 2)
+                await _accounting.RegistrarSalidaInventarioAsync(orden);
+
+                // 9. Trazabilidad
+                await _trazabilidad.RegistrarEventoAsync(
+                    vehiculoId:   orden.VehiculoId,
+                    tipo:         TipoEvento.FacturaGenerada,
+                    descripcion:  $"Factura #{numeroFactura} generada para Orden #{orden.NumeroOrden}" +
+                                  (tipoFacturacion == TipoFacturacion.Electronica
+                                   ? " [Electrónica – Pendiente DIAN]" : ""),
+                    referenciaId: factura.Id,
+                    tenantId:     tenantId);
+            }
+
+            // 10. Recalcular IVA y Total (fórmula Colombia): (Subtotal − Descuento) × 1.19
+            var subtotalNeto = factura.Subtotal - factura.Descuento;
+            factura.IVA   = Math.Round(subtotalNeto * 0.19m, 2);
+            factura.Total = Math.Round(subtotalNeto + factura.IVA, 2);
+
+            _db.Facturas.Add(factura);
+
+            // 11. Contabilidad: Factura (Evento 1)
+            await _accounting.RegistrarFacturaAsync(factura);
+
+            // 12. Contabilidad: Recaudo (Evento 3) - Asumimos recaudo inmediato en este flujo
+            var pagoSimulado = new Pago
+            {
+                TenantId = tenantId,
+                Monto = factura.Total,
+                Fecha = DateTime.UtcNow,
+                Referencia = factura.NumeroFactura
+            };
+            await _accounting.RegistrarPagoAsync(pagoSimulado, factura);
+
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+            return factura;
         }
-
-        // 10. Recalcular IVA y Total (fórmula Colombia): (Subtotal − Descuento) × 1.19
-        var subtotalNeto = factura.Subtotal - factura.Descuento;
-        factura.IVA   = Math.Round(subtotalNeto * 0.19m, 2);
-        factura.Total = Math.Round(subtotalNeto + factura.IVA, 2);
-
-        _db.Facturas.Add(factura);
-
-        // 11. Contabilidad: Factura (Evento 1)
-        await _accounting.RegistrarFacturaAsync(factura);
-
-        // 12. Contabilidad: Recaudo (Evento 3) - Asumimos recaudo inmediato en este flujo
-        var pagoSimulado = new Pago
+        catch
         {
-            TenantId = tenantId,
-            Monto = factura.Total,
-            Fecha = DateTime.UtcNow,
-            Referencia = factura.NumeroFactura
-        };
-        await _accounting.RegistrarPagoAsync(pagoSimulado, factura);
-
-        await _db.SaveChangesAsync();
-        return factura;
+            await tx.RollbackAsync();
+            throw;
+        }
     }
 
     // ── Consultas ─────────────────────────────────────────────────────────────

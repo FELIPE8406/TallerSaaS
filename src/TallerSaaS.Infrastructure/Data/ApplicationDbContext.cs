@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using TallerSaaS.Application.Interfaces;
 using TallerSaaS.Domain.Entities;
 using TallerSaaS.Domain.Interfaces;
+using System.Data;
 
 namespace TallerSaaS.Infrastructure.Data;
 
@@ -315,4 +317,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             new PlanSuscripcion { Id = 3, Nombre = "Empresarial", LimiteUsuarios = 50, Precio = 1499m, Descripcion = "Usuarios ilimitados, soporte prioritario" }
         );
     }
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default) =>
+        Database.BeginTransactionAsync(isolationLevel, cancellationToken);
 }

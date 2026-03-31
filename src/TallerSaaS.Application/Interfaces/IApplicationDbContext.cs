@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage;
 using TallerSaaS.Domain.Entities;
+using System.Data;
 
 namespace TallerSaaS.Application.Interfaces;
 
@@ -34,6 +36,13 @@ public interface IApplicationDbContext
     // Payroll Module
     DbSet<NominaRegistro> NominaRegistros { get; }
     DbSet<EmpleadoContrato> EmpleadoContratos { get; }
+
+    /// <summary>
+    /// Exposes transactional boundaries for critical operations (stock/facturación).
+    /// </summary>
+    Task<IDbContextTransaction> BeginTransactionAsync(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default);
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

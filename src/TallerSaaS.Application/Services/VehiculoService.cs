@@ -76,7 +76,9 @@ public class VehiculoService
         }
 
         // Limit results for lookups
-        if (string.IsNullOrEmpty(buscar) && !clienteId.HasValue)
+        if (!string.IsNullOrEmpty(buscar))
+            query = query.Take(20);
+        else if (!clienteId.HasValue)
             query = query.Take(50);
 
         return await query.OrderByDescending(v => v.FechaRegistro)
