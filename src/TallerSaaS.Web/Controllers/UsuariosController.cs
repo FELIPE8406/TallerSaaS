@@ -77,10 +77,11 @@ public class UsuariosController : Controller
                     _db.MechanicAvailabilities.Add(new MechanicAvailability
                     {
                         MechanicId = user.Id,
-                        DayOfWeek = i,
-                        StartTime = new TimeSpan(8, 0, 0),
-                        EndTime = new TimeSpan(18, 0, 0),
-                        IsActive = true
+                        TenantId   = tenantId.Value,
+                        DayOfWeek  = i,
+                        StartTime  = new TimeSpan(8, 0, 0),
+                        EndTime    = new TimeSpan(18, 0, 0),
+                        IsActive   = true
                     });
                 }
                 await _db.SaveChangesAsync();
