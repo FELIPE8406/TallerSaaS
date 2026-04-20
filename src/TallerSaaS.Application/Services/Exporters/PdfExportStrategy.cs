@@ -49,7 +49,7 @@ public class PdfExportStrategy : IExportStrategy
                         c.RelativeColumn(2); c.RelativeColumn(3); c.RelativeColumn(2);
                         c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2);
                     });
-                    string[] headers = ["No. Orden", "Cliente", "Estado", "Fecha Entrada", "Descuento", "Total COP"];
+                    string[] headers = new[] { "No. Orden", "Cliente", "Estado", "Fecha Entrada", "Descuento", "Total COP" };
                     t.Header(h =>
                     {
                         foreach (var header in headers)
@@ -108,7 +108,7 @@ public class PdfExportStrategy : IExportStrategy
                         c.RelativeColumn(3); c.RelativeColumn(2); c.RelativeColumn(1);
                         c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2);
                     });
-                    string[] headers = ["No. Factura", "Fecha Emisión", "Órdenes", "Subtotal", "IVA", "Total COP"];
+                    string[] headers = new[] { "No. Factura", "Fecha Emisión", "Órdenes", "Subtotal", "IVA", "Total COP" };
                     t.Header(h =>
                     {
                         foreach (var header in headers)
@@ -165,7 +165,7 @@ public class PdfExportStrategy : IExportStrategy
                         c.RelativeColumn(3); c.RelativeColumn(2);
                         c.RelativeColumn(3); c.RelativeColumn(2);
                     });
-                    string[] headers = ["Cliente", "Teléfono", "Vehículo", "Placa"];
+                    string[] headers = new[] { "Cliente", "Teléfono", "Vehículo", "Placa" };
                     t.Header(h =>
                     {
                         foreach (var header in headers)

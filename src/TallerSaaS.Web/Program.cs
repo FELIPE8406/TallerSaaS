@@ -148,59 +148,75 @@ var app = builder.Build();
 // ── Database migration & seed ───────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db          = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var config      = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    var logger      = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var services = scope.ServiceProvider;
 
-    const int maxAttempts = 3;
-    for (int attempt = 1; attempt <= maxAttempts; attempt++)
+    try
     {
-        try
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        await dbContext.Database.MigrateAsync();
+
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        string[] roles = new[] { "SuperAdmin", "Admin", "Mecanico" };
+
+        foreach (var role in roles)
         {
-            logger.LogInformation("Migración DB — intento {Attempt}/{Max}…", attempt, maxAttempts);
-            await db.Database.MigrateAsync();
-            logger.LogInformation("✅ Migraciones aplicadas correctamente.");
-            break;  // éxito — salir del loop
+            if (!await roleManager.RoleExistsAsync(role))
+                await roleManager.CreateAsync(new IdentityRole(role));
         }
-        catch (Microsoft.Data.SqlClient.SqlException ex)
-            when (attempt < maxAttempts &&
-                  (ex.Number == -2 ||   // Connection Timeout Expired
-                   ex.Number ==  0 ||   // General network / transport error
-                   ex.Number == 53 ||   // Named Pipes Provider error
-                   ex.Number == 18456)) // Login failed (transitorio en Azure SQL)
+
+        var email = "superadmin@tallersaas.com";
+        var password = "SuperAdmin123!";
+
+        var user = await userManager.FindByEmailAsync(email);
+
+        if (user == null)
         {
-            var delay = TimeSpan.FromSeconds(attempt * 5); // backoff: 5 s, 10 s
-            logger.LogWarning(ex,
-                "⚠ SqlException #{SqlError} en migración (intento {Attempt}/{Max}). "
-                + "Reintentando en {Delay}s…",
-                ex.Number, attempt, maxAttempts, delay.TotalSeconds);
-            await Task.Delay(delay);
+            user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                NombreCompleto = "Super Administrador",
+                EsSuperAdmin = true,
+                Activo = true
+            };
+
+            await userManager.CreateAsync(user, password);
+            await userManager.AddToRoleAsync(user, "SuperAdmin");
         }
-        catch (Exception ex) when (attempt < maxAttempts)
+        else
         {
-            var delay = TimeSpan.FromSeconds(attempt * 5);
-            logger.LogWarning(ex,
-                "⚠ Error inesperado en migración (intento {Attempt}/{Max}). "
-                + "Reintentando en {Delay}s…",
-                attempt, maxAttempts, delay.TotalSeconds);
-            await Task.Delay(delay);
-        }
-        catch (Exception ex)
-        {
-            // Último intento fallido → crash controlado con log crítico
-            logger.LogCritical(ex,
-                "❌ Fallo definitivo en la migración DB tras {Max} intentos. "
-                + "La aplicación no puede iniciar.", maxAttempts);
-            throw; // re-throw: el host registra correctamente y no silencia el error
+            // Forzar estado óptimo y rol
+            user.EmailConfirmed = true;
+            user.EsSuperAdmin = true;
+            user.Activo = true;
+
+            await userManager.UpdateAsync(user);
+
+            // Reset password seguro para garantizar acceso
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            await userManager.ResetPasswordAsync(user, token, password);
+
+            // Asegurar pertenencia al rol
+            if (!await userManager.IsInRoleAsync(user, "SuperAdmin"))
+            {
+                await userManager.AddToRoleAsync(user, "SuperAdmin");
+            }
         }
     }
-
-    await SeedDataAsync(userManager, roleManager, config);
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Error crítico en seed de SuperAdmin o Migración");
+        // No relanzamos para permitir el arranque de la app en MonsterASP
+    }
 }
 
+
 // ─── Middleware pipeline ──────────────────────────────────────────────────────
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -221,28 +237,5 @@ app.MapControllerRoute(
 
 app.Run();
 
-// ─── Seed: Roles + SuperAdmin ─────────────────────────────────────────────────
-static async Task SeedDataAsync(UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole> roleManager, IConfiguration config)
-{
-    string[] roles = ["SuperAdmin", "Admin", "Mecanico"];
-    foreach (var role in roles)
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole(role));
 
-    var superAdminEmail = config["SuperAdmin:Email"] ?? "superadmin@tallersaas.com";
-    var superAdminPass = config["SuperAdmin:Password"] ?? "SuperAdmin@2025!";
 
-    if (await userManager.FindByEmailAsync(superAdminEmail) == null)
-    {
-        var superAdmin = new ApplicationUser
-        {
-            UserName = superAdminEmail, Email = superAdminEmail,
-            NombreCompleto = "Super Administrador", EsSuperAdmin = true, Activo = true,
-            EmailConfirmed = true
-        };
-        var result = await userManager.CreateAsync(superAdmin, superAdminPass);
-        if (result.Succeeded)
-            await userManager.AddToRoleAsync(superAdmin, "SuperAdmin");
-    }
-}

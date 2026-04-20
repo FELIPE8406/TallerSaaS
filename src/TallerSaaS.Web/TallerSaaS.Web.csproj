@@ -7,18 +7,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.104.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.2">
+    <PackageReference Include="ClosedXML" Version="0.102.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="9.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="6.0.0" />
     <PackageReference Include="QuestPDF" Version="2024.10.4" />
   </ItemGroup>
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>

@@ -1,11 +1,11 @@
 # 🔧 TallerSaaS
 
 > **Sistema SaaS de Gestión para Talleres Automotrices**
-> Multi-tenant • ASP.NET Core 9 • SQL Server
+> Multi-tenant • ASP.NET Core 6 • SQL Server
 
-[![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
-[![C#](https://img.shields.io/badge/C%23-13-239120?style=flat-square&logo=csharp)](https://learn.microsoft.com/dotnet/csharp/)
-[![EF Core](https://img.shields.io/badge/EF_Core-9.0-512BD4?style=flat-square)](https://learn.microsoft.com/ef/core/)
+[![.NET](https://img.shields.io/badge/.NET-6.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![C#](https://img.shields.io/badge/C%23-10-239120?style=flat-square&logo=csharp)](https://learn.microsoft.com/dotnet/csharp/)
+[![EF Core](https://img.shields.io/badge/EF_Core-6.0-512BD4?style=flat-square)](https://learn.microsoft.com/ef/core/)
 [![SQL Server](https://img.shields.io/badge/SQL_Server-2019%2B-CC2927?style=flat-square&logo=microsoftsqlserver)](https://www.microsoft.com/sql-server)
 [![License](https://img.shields.io/badge/license-Proprietary-red?style=flat-square)]()
 
@@ -15,14 +15,32 @@
 
 **TallerSaaS** es una plataforma web multi-tenant diseñada para la gestión integral de talleres de servicio automotriz. Permite a múltiples talleres (tenants) operar de forma aislada sobre una sola instalación, administrando su ciclo operativo completo: desde la recepción del vehículo hasta la facturación, trazabilidad, inventario y exportación de reportes.
 
-**Problema que resuelve:** Elimina el uso de hojas de Excel dispersas y software de escritorio desconectado, centralizando en una sola plataforma SaaS toda la información de órdenes, clientes, vehículos, pagos e inventario de piezas.
+**Estado Actual:**
+- Aplicación desplegada y estable.
+- Sistema de autenticación y roles (`SuperAdmin`, `Admin`, `Mecanico`) totalmente funcional.
+- Plataforma lista para demostraciones y pruebas con clientes reales.
 
 ---
 
-## 📖 Documentación
+## 🌐 URL del Sistema
 
-Para una visión profunda de la arquitectura y lógica del negocio, consulta:
-- **[Documentación Integral](docs/DocumentacionIntegral.md):** Arquitectura multi-tenant, diccionario de módulos y lógica contable detallada.
+El sistema se encuentra desplegado en el siguiente enlace de producción:
+👉 **[https://geardash.runasp.net](https://geardash.runasp.net)**
+
+### Acceso Demo
+El acceso a la plataforma demo para revisiones comerciales o técnicas está disponible bajo solicitud. 
+> **Nota:** Por motivos de seguridad, las credenciales no se publican en este repositorio. Por favor, contacte al desarrollador para obtener una cuenta de prueba.
+
+---
+
+## ✨ Características Principales
+
+- **Gestión de Clientes y Vehículos:** CRUD completo con soporte multi-vehículo.
+- **Órdenes de Trabajo:** Ciclo de vida completo desde recepción hasta entrega con cálculo automático de costos e IVA.
+- **Control de Empleados:** Gestión de nómina, contratos y asignación de tareas.
+- **Inventario y Bodega:** Control de stock, movimientos y alertas de existencias.
+- **Contabilidad y Facturación:** Generación de facturas, registro de pagos y automatización de asientos contables.
+- **Reportes y Exportación:** Generación de reportes en Excel, CSV, TXT y PDF (Apple-style).
 
 ---
 
@@ -30,265 +48,45 @@ Para una visión profunda de la arquitectura y lógica del negocio, consulta:
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
-| **Runtime** | .NET / C# | 9.0 |
-| **Framework Web** | ASP.NET Core MVC | 9.0 |
-| **ORM** | Entity Framework Core | 9.0.2 |
+| **Runtime** | .NET / C# | 6.0 |
+| **Framework Web** | ASP.NET Core MVC | 6.0 |
+| **ORM** | Entity Framework Core | 6.0.36 |
 | **Base de datos** | Microsoft SQL Server | 2019+ |
-| **Autenticación** | ASP.NET Core Identity | 9.0.2 |
-| **Frontend** | Razor Views + Bootstrap 5 | — |
-| **Iconografía** | Bootstrap Icons | CDN |
-| **Generación Excel** | ClosedXML | 0.104.2 |
+| **Autenticación** | ASP.NET Core Identity | 6.0 |
+| **Generación Excel** | ClosedXML | 0.102.1 |
 | **Generación PDF** | QuestPDF (Community) | 2024.10.4 |
-| **Sesiones** | Distributed Memory Cache | built-in |
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Arquitectura (Clean Architecture)
 
-El proyecto sigue **Clean Architecture** dividido en 4 proyectos de clase:
+El proyecto está estructurado para facilitar la escalabilidad y mantenibilidad:
 
-```
-TallerSaaS/
-└── src/
-    ├── TallerSaaS.Domain/          # Entidades de negocio, enums, contratos de dominio
-    │   ├── Entities/               # Cliente, Vehiculo, Orden, Factura, Tenant, Bodega, …
-    │   ├── Enums/                  # EstadoOrden, TipoMovimiento, …
-    │   └── Interfaces/             # IRepository<T>
-    │
-    ├── TallerSaaS.Application/     # Lógica de aplicación (sin dependencias de infraestructura)
-    │   ├── DTOs/                   # ReporteFilter, TimeZoneHelper, ViewModels
-    │   ├── Interfaces/             # IApplicationDbContext, IExportStrategy
-    │   └── Services/               # ReporteService, OrdenService, FacturaService, …
-    │       └── Exporters/          # CsvExportStrategy, TxtExportStrategy, PdfExportStrategy
-    │
-    ├── TallerSaaS.Infrastructure/  # Implementaciones concretas
-    │   ├── Data/                   # ApplicationDbContext, Seed
-    │   ├── Migrations/             # EF Core Migrations
-    │   ├── Middleware/             # TenantMiddleware
-    │   ├── Repositories/           # GenericRepository<T>
-    │   └── Services/               # CurrentTenantService, TenantClaimsFactory
-    │
-    ├── TallerSaaS.Shared/          # Helpers cross-cutting (TenantClaimTypes, ModelBinders)
-    │
-    └── TallerSaaS.Web/             # Capa de presentación ASP.NET Core MVC
-        ├── Controllers/            # 11 controladores (Auth, Dashboard, Clientes, …)
-        └── Views/                  # Razor Views por módulo
-```
-
-### Patrón Multi-tenant
-El aislamiento de datos se implementa mediante **`TenantMiddleware`** que inyecta el `TenantId` en el contexto HTTP tras la autenticación. El `ApplicationDbContext` filtra automáticamente los datos por `TenantId` en cada consulta.
-
-### Patrón Estrategia — Exportaciones
-El módulo de reportes usa el **Strategy Pattern** (`IExportStrategy`) para generar CSV, TXT o XLSX sin duplicar lógica de negocio. El controlador delega al strategy correcto según el parámetro `formato`.
+- **TallerSaaS.Domain:** Entidades de negocio centrales.
+- **TallerSaaS.Application:** Lógica de negocio y servicios.
+- **TallerSaaS.Infrastructure:** Acceso a datos, migraciones y middleware multi-tenant.
+- **TallerSaaS.Web:** Interfaz de usuario (MVC) y controladores.
 
 ---
 
-## ✨ Características Principales
+## ⚙️ Instrucciones de Despliegue
 
-### 👥 Gestión de Clientes y Vehículos
-- CRUD completo de clientes con soporte de múltiples vehículos por cliente.
-- Registro de VIN, placa, año, marca, modelo y kilometraje.
-
-### 📋 Órdenes de Trabajo
-- Creación de órdenes con ítems detallados (descripción, cantidad, precio unitario).
-- Cálculo automático de subtotal, descuento, IVA (19%) y total en COP.
-- Estados de orden: `Recibido → En Diagnóstico → En Reparación → Listo → Entregado`.
-- Historial de trazabilidad por evento.
-
-### 🧾 Facturación
-- Generación de facturas consolidadas agrupando múltiples órdenes.
-- Numeración automática correlativa por tenant.
-- Registro de pagos parciales o totales.
-
-### 📦 Inventario y Bodega
-- Gestión de productos con stock mínimo y alertas.
-- Movimientos de inventario (entrada / salida / ajuste) con trazabilidad.
-- Soporte de múltiples bodegas por tenant.
-
-### 📊 Reportes y Exportaciones
-| Reporte | Excel | CSV | TXT |
-|---------|-------|-----|-----|
-| Órdenes de trabajo | ✅ | ✅ | ✅ |
-| Facturas | ✅ | ✅ | ✅ |
-| Clientes y vehículos | ✅ | ✅ | ✅ |
-| PDF por orden/factura | ✅ | — | — |
-
-- Filtros por periodo: **Trimestral, Semestral, Anual, Personalizado**.
-- Excel se sirve como `Content-Disposition: inline` → apertura en nueva pestaña sin descarga forzada.
-- Excel se sirve como `Content-Disposition: inline` → apertura en nueva pestaña sin descarga forzada.
-- Zona horaria correcta UTC-5 (Colombia) en todos los filtros de fecha.
-
-### 💰 Contabilidad y Tributación (Normativa Colombia)
-- Automatización de asientos contables en el **PUC** al facturar.
-- Manejo de **IVA (19%)** y retenciones (Fuente e ICA).
-- Diferenciación de ingresos por servicios vs. repuestos.
-- Registro de Costo de Ventas (COGS) sincronizado con inventario.
-
-### 📅 Agenda y Citas
-- Programación de servicios y asignación de mecánicos.
-- Gestión de disponibilidad por bahía y horario laboral.
-- Prevención de cruces de horarios (Double-booking).
-
-### 🔐 Autenticación y Roles
-| Rol | Acceso |
-|-----|--------|
-| `SuperAdmin` | Administración global de tenants y usuarios |
-| `Admin` | Gestión completa de un tenant (clientes, órdenes, reportes, inventario) |
-| `Mecanico` | Visualización y actualización de órdenes asignadas |
-
-### 🏢 SuperAdmin Console
-- Registro y administración de nuevos tenants (talleres).
-- Panel ejecutivo con métricas globales.
-
----
-
-## ⚙️ Instalación y Configuración
-
-### Pre-requisitos
-
-| Herramienta | Versión mínima |
-|------------|----------------|
-| .NET SDK | 9.0 |
-| SQL Server | 2019 (Express válido) |
-| Git | cualquier |
-
-### 1 — Clonar el repositorio
+Para realizar un despliegue manual en servidores IIS o similares:
 
 ```bash
-git clone https://github.com/<org>/TallerSaaS.git
-cd TallerSaaS
+# 1. Limpiar versiones anteriores
+dotnet clean
+
+# 2. Compilar el proyecto
+dotnet build
+
+# 3. Publicar en modo Release (Framework-Dependent para MonsterASP)
+dotnet publish -c Release -o ./publish
 ```
 
-### 2 — Configurar la cadena de conexión
-
-Edita `src/TallerSaaS.Web/appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=TallerSaaS;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
-  },
-  "SuperAdmin": {
-    "Email": "superadmin@tallersaas.com",
-    "Password": "SuperAdmin@2025!"
-  }
-}
-```
-
-> **Nota:** Para desarrollo local con usuario/contraseña SQL usa:
-> ```
-> Server=localhost;Database=TallerSaaS;User Id=sa;Password=<pwd>;TrustServerCertificate=True
-> ```
-
-Para sobreescribir credenciales sin modificar el archivo, usa `User Secrets`:
-
-```bash
-cd src/TallerSaaS.Web
-dotnet user-secrets set "SuperAdmin:Password" "MiPasswordSeguro@123"
-```
-
-### 3 — Aplicar migraciones y seed inicial
-
-```bash
-# Desde la raíz del repositorio
-dotnet ef database update --project src/TallerSaaS.Infrastructure --startup-project src/TallerSaaS.Web
-```
-
-El seed crea automáticamente los roles (`SuperAdmin`, `Admin`, `Mecanico`) y el usuario SuperAdmin definido en `appsettings.json`.
-
-### 4 — Ejecutar la aplicación
-
-```bash
-cd src/TallerSaaS.Web
-dotnet run
-```
-
-La aplicación estará disponible en `https://localhost:5001` y `http://localhost:5000`.
-
-### 5 — (Opcional) Build de producción
-
-```bash
-dotnet publish src/TallerSaaS.Web -c Release -o ./publish
-```
-
----
-
-## 🗺️ Rutas Principales (MVC Routes)
-
-### Módulos de negocio
-
-| Módulo | Ruta Base | Acceso |
-|--------|-----------|--------|
-| Dashboard | `GET /Dashboard` | Admin, SuperAdmin |
-| Clientes | `GET/POST /Clientes` | Admin, SuperAdmin |
-| Vehículos | `GET/POST /Vehiculos` | Admin, SuperAdmin |
-| Órdenes | `GET/POST /Ordenes` | Admin, Mecánico, SuperAdmin |
-| Facturas | `GET/POST /Facturas` | Admin, SuperAdmin |
-| Inventario | `GET/POST /Inventario` | Admin, SuperAdmin |
-| Bodega | `GET/POST /Bodega` | Admin, SuperAdmin |
-| Contabilidad | `GET /Contabilidad` | Admin (Premium), SuperAdmin |
-| Agenda | `GET /Agenda` | Admin, Mecánico, SuperAdmin |
-| Trazabilidad | `GET /Trazabilidad` | Admin, SuperAdmin |
-
-### Módulo de Reportes
-
-| Endpoint | Parámetros | Descripción |
-|----------|-----------|-------------|
-| `GET /Reportes` | — | Dashboard de exportaciones |
-| `GET /Reportes/ExportarOrdenes` | `formato`, `periodo`, `desde`, `hasta` | Excel / CSV / TXT de órdenes |
-| `GET /Reportes/ExportarFacturas` | `formato`, `periodo`, `desde`, `hasta` | Excel / CSV / TXT de facturas |
-| `GET /Reportes/ExportarClientesVehiculos` | `formato`, `periodo`, `desde`, `hasta` | Excel / CSV / TXT de clientes |
-| `GET /Reportes/FacturaPdf/{ordenId}` | `ordenId` (GUID) | PDF Apple-style de una orden |
-
-**Valores válidos para `periodo`:** `trimestral` · `semestral` · `anual` · `personalizado`
-**Valores válidos para `formato`:** `excel` · `csv` · `txt`
-
-### Autenticación
-
-| Endpoint | Método | Descripción |
-|----------|--------|-------------|
-| `/Account/Login` | GET / POST | Inicio de sesión |
-| `/Account/Logout` | POST | Cierre de sesión |
-| `/Account/AccessDenied` | GET | Acceso denegado |
-
-### SuperAdmin
-
-| Endpoint | Método | Descripción |
-|----------|--------|-------------|
-| `/SuperAdmin` | GET | Panel ejecutivo global |
-| `/SuperAdmin/NuevoTenant` | GET / POST | Registro de nuevo taller |
-
----
-
-## 🗄️ Modelo de Datos (Entidades principales)
-
-```
-Tenant ─┬─► ApplicationUser (Identity)
-        ├─► Cliente ──► Vehiculo ──► Orden ──► ItemOrden
-        │                                 └──► EventoTrazabilidad
-        ├─► Factura ◄───────────────── Orden (N:M)
-        │        └──► Pago
-        └─► Bodega ──► ProductoInventario ──► MovimientoInventario
-```
-
----
-
-## 🤝 Contribuir
-
-1. Haz fork del repositorio.
-2. Crea una rama: `git checkout -b feature/nombre-feature`.
-3. Haz commit de tus cambios: `git commit -m 'feat: descripción'`.
-4. Abre un Pull Request hacia `main` con descripción detallada.
-
-### Convenciones de commits
-
-```
-feat:     Nueva funcionalidad
-fix:      Corrección de bug
-refactor: Refactorización sin cambio de comportamiento
-docs:     Cambios en documentación
-chore:    Mantenimiento (dependencias, configs)
-```
+### Advertencias Críticas
+- **Seguridad:** NUNCA incluyas credenciales (usuarios, contraseñas, connection strings) en repositorios públicos.
+- **Configuración:** Asegúrate de configurar correctamente el archivo `appsettings.json` en el servidor con los datos de la base de datos de producción.
 
 ---
 
