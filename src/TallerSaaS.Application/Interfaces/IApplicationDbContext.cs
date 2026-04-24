@@ -46,6 +46,8 @@ public interface IApplicationDbContext
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
+    IExecutionStrategy CreateExecutionStrategy();
+
     /// <summary>Exposes the EF change tracker entry for a given entity instance,
     /// enabling ReloadAsync() during DbUpdateConcurrencyException handling.</summary>
     EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;

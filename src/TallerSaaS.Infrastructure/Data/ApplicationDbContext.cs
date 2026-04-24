@@ -131,6 +131,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             e.Property(i => i.Cantidad).HasColumnType("decimal(10,2)");
             e.Property(i => i.PrecioUnitario).HasColumnType("decimal(12,2)");
             e.Ignore(i => i.Subtotal);
+            e.HasIndex(i => i.TenantId);
+            e.HasQueryFilter(i => _tenantService.TenantId != null && i.TenantId == _tenantService.TenantId);
             e.HasOne(i => i.Orden).WithMany(o => o.Items)
              .HasForeignKey(i => i.OrdenId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -322,4 +324,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         IsolationLevel isolationLevel,
         CancellationToken cancellationToken = default) =>
         Database.BeginTransactionAsync(isolationLevel, cancellationToken);
+
+    public IExecutionStrategy CreateExecutionStrategy() => Database.CreateExecutionStrategy();
 }

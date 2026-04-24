@@ -236,6 +236,7 @@ public class OrdenService
         // ── Phase 2: INSERT the item only (simple operation, no concurrency risk) ──
         var item = new ItemOrden
         {
+            TenantId       = ordenCheck.TenantId, 
             OrdenId        = ordenId,
             Descripcion    = dto.Descripcion,
             Tipo           = dto.Tipo,

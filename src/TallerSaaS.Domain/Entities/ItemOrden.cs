@@ -12,4 +12,5 @@ public class ItemOrden
     public decimal Subtotal => Cantidad * PrecioUnitario;
     public Guid? ProductoInventarioId { get; set; }
     public ProductoInventario? ProductoInventario { get; set; }
+    public Guid TenantId { get; set; }
 }
